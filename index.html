@@ -22,13 +22,10 @@
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; position: relative; }
         
-        /* Fixed HUD Section */
         #hud-area { height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px; }
         #hearts-container { display: flex; gap: 10px; font-size: 2rem; min-height: 2.5rem; margin-bottom: 5px; }
-        .heart { color: var(--red); transition: color 0.3s; }
+        .heart { color: var(--red); }
         .heart.lost { color: #333; }
-        #timer-display { font-size: 1.2rem; font-family: monospace; color: #aaa; }
-        #timer-display span { color: white; font-weight: bold; }
 
         #game-container { display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px; }
         .row { display: flex; gap: 8px; position: relative; }
@@ -42,9 +39,7 @@
         body.training-on .train-label { opacity: 1; }
 
         .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; box-sizing: border-box; pointer-events: none; }
-        .item.active-loc .circle { background: blue !important; border-color: white !important; }
-
-        #controls { display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 10px; }
+        #controls { display: flex; flex-direction: column; align-items: center; width: 100%; }
         input#answer-input { padding: 10px; font-size: 1.5rem; width: 220px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         
         #result-panel { margin-top: 20px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid transparent; text-align: center; width: 420px; }
@@ -53,8 +48,6 @@
         
         button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; }
-        .retry-btn { background: var(--accent); color: white; }
-        
         .hidden { display: none !important; }
         .invisible { opacity: 0; pointer-events: none; }
     </style>
@@ -102,212 +95,16 @@
             <div id="res-title" class="res-title"></div>
             <div id="res-detail" class="res-detail"></div>
             <div id="res-actions">
-                <button class="retry-btn" onclick="initCurrentMode()">NEW GAME</button>
-                <button class="reveal-btn" style="background:#555; color:white;" onclick="showAllColors()">REVEAL BOARD</button>
+                <button style="background:var(--accent); color:white;" onclick="initCurrentMode()">NEW GAME</button>
+                <button style="background:#555; color:white;" onclick="showAllColors()">REVEAL</button>
             </div>
         </div>
     </div>
 
     <script>
-        const lettersTop = "ABCDEFGHIJKLMN".split("");
-        const lettersBottom = "OPQRSTUVWXYZ12".split("");
+        const lettersTop = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"];
+        const lettersBottom = ["O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2"];
         const allLetters = [...lettersTop, ...lettersBottom];
+        
         let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
-        let timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
-
-        const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
-
-        function buildGrid() {
-            const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
-            top.innerHTML = ''; bot.innerHTML = '';
-            lettersTop.forEach((l, i) => top.appendChild(createItem(l, i + 1, 'top-label')));
-            lettersBottom.forEach((l, i) => bot.appendChild(createItem(l, i + 1, 'bot-label')));
-        }
-
-        function createItem(l, num, labelClass) {
-            const item = document.createElement('div');
-            item.className = 'item'; item.id = `item-${l}`;
-            item.dataset.letter = l; item.dataset.num = num;
-            const label = document.createElement('div');
-            label.className = `train-label ${labelClass}`;
-            label.innerText = locType === 'LET' ? l : num;
-            item.appendChild(label);
-            for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
-            item.onclick = () => handleItemClick(item);
-            return item;
-        }
-
-        function toggleTraining() { document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked); }
-
-        function applyColor(item, type, isVisible) {
-            const circles = item.querySelectorAll('.circle');
-            circles.forEach(c => { c.style.background = 'black'; c.style.borderColor = isVisible ? '#333' : '#1a1a1a'; });
-            if (!isVisible || !type) return;
-            if (type.startsWith('s-')) {
-                const color = type.split('-')[1];
-                circles.forEach(c => { c.style.background = color; c.style.borderColor = 'white'; });
-            } else {
-                const p = type.split('-');
-                circles.forEach((c, i) => { 
-                    if(i === 4) { c.style.background = p[3]; c.style.borderColor = 'white'; }
-                    else { c.style.background = p[1]; c.style.borderColor = 'rgba(255,255,255,0.3)'; }
-                });
-            }
-        }
-
-        function switchMode(mode) {
-            currentMode = mode;
-            document.getElementById('result-panel').classList.add('hidden');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id.includes(mode.toLowerCase().slice(0,3))));
-            document.getElementById('loc-subnav').classList.toggle('hidden', mode !== 'LOCATION');
-            document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
-            
-            const hearts = document.getElementById('hearts-container');
-            const timerDisp = document.getElementById('timer-display');
-            
-            hearts.classList.toggle('hidden', mode === 'LOCATION');
-            timerDisp.classList.toggle('hidden', mode !== 'GAME');
-
-            const inp = document.getElementById('answer-input');
-            inp.placeholder = mode === 'SEQUENCE' ? "6 LETTERS" : "?";
-            inp.style.width = mode === 'SEQUENCE' ? "220px" : "80px";
-            resetBoard();
-            if(mode === 'LOCATION') startLocationRound();
-        }
-
-        function initCurrentMode() {
-            document.getElementById('result-panel').classList.add('hidden');
-            document.getElementById('feedback').innerText = "";
-            if (currentMode === 'GAME') initGameMode();
-            else if (currentMode === 'SEQUENCE') initSequenceMode();
-        }
-
-        function initSequenceMode() {
-            gameActive = false; clearInterval(interval);
-            const shuffledColors = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            const letterToColorMap = {};
-            allLetters.forEach((letter, i) => {
-                const item = document.getElementById(`item-${letter}`);
-                item.classList.remove('invisible', 'active-loc');
-                item.dataset.color = shuffledColors[i];
-                letterToColorMap[letter] = shuffledColors[i];
-                applyColor(item, shuffledColors[i], true);
-            });
-            const scanPath = [];
-            for (let i = 0; i < 14; i++) { scanPath.push(lettersTop[i]); scanPath.push(lettersBottom[i]); }
-            const history = []; const matches = [];
-            scanPath.forEach(letter => {
-                const color = letterToColorMap[letter];
-                if (history.includes(color)) matches.push(letter);
-                else history.push(color);
-            });
-            correctSequence = matches.slice(0, 6).join("");
-            document.getElementById('start-btn').classList.add('hidden');
-        }
-
-        function handleItemClick(item) {
-            if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
-            
-            // ONE-CLICK START LOGIC
-            if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
-                gameActive = true;
-                if (currentMode === 'GAME') startTimer();
-                hideAllColors();
-                // After hiding all, re-apply color only to the item just clicked so it stays visible
-                applyColor(item, item.dataset.color, true);
-            }
-
-            if (currentMode === 'SEQUENCE') return;
-            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
-            if (item === firstCard) return;
-
-            applyColor(item, item.dataset.color, true);
-            if (!firstCard) { firstCard = item; } 
-            else {
-                if (firstCard.dataset.color === item.dataset.color) {
-                    const pair = [firstCard, item];
-                    setTimeout(() => { pair.forEach(p => p.classList.add('invisible')); matchesFound++; if (matchesFound === 14) endGame(true); }, 400);
-                    firstCard = null;
-                } else {
-                    lives--; updateHearts(); awaitingReset = true; showAllColors();
-                    if (lives <= 0) endGame(false); firstCard = null;
-                }
-            }
-        }
-
-        function checkSequence() {
-            const val = document.getElementById('answer-input').value.toUpperCase().trim();
-            const panel = document.getElementById('result-panel');
-            panel.classList.remove('hidden');
-            if (val === correctSequence) {
-                document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                document.getElementById('res-detail').innerHTML = "Perfect match on the scan!";
-                panel.style.borderColor = "var(--green)";
-            } else {
-                document.getElementById('res-title').innerHTML = "WRONG ❌";
-                document.getElementById('res-detail').innerHTML = `Expected: <b style="color:var(--accent)">${correctSequence}</b> | Got: <b style="color:var(--red)">${val || 'None'}</b>`;
-                panel.style.borderColor = "var(--red)";
-            }
-            gameActive = false;
-        }
-
-        function endGame(win) {
-            gameActive = false; clearInterval(interval);
-            const panel = document.getElementById('result-panel'); panel.classList.remove('hidden');
-            if (win) {
-                document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                document.getElementById('res-detail').innerHTML = "Final Score: " + Math.round(1000 * (timer / 90) + (50 * lives));
-                panel.style.borderColor = "var(--green)";
-            } else {
-                document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = "Better luck next time!";
-                panel.style.borderColor = "var(--red)";
-            }
-        }
-
-        function showAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, i.dataset.color, true)); }
-        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
-        function updateHUD() { document.getElementById('timer').innerText = timer; }
-        function updateHearts() {
-            const container = document.getElementById('hearts-container'); container.innerHTML = '';
-            for(let i=0; i<5; i++) {
-                const span = document.createElement('span'); span.className = i < lives ? 'heart' : 'heart lost';
-                span.innerHTML = '❤'; container.appendChild(span);
-            }
-        }
-        function startTimer() { interval = setInterval(() => { timer--; updateHUD(); if (timer <= 0) endGame(false); }, 1000); }
-        function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(item => { item.classList.remove('invisible', 'active-loc'); applyColor(item, '', false); }); }
-        
-        function initGameMode() {
-            document.getElementById('result-panel').classList.add('hidden');
-            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD(); updateHearts();
-            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            allLetters.forEach((letter, i) => {
-                const item = document.getElementById(`item-${letter}`);
-                item.classList.remove('invisible', 'active-loc'); item.dataset.color = shuffled[i]; applyColor(item, shuffled[i], true);
-            });
-            document.getElementById('start-btn').classList.add('hidden');
-        }
-        
-        function setLocType(t) { locType = t; buildGrid(); switchMode('LOCATION'); }
-        document.getElementById('answer-input').onkeyup = (e) => {
-            if(e.key === 'Enter') {
-                if (currentMode === 'SEQUENCE') checkSequence();
-                else {
-                    const val = e.target.value.toUpperCase().trim();
-                    const item = document.getElementById(`item-${currentTarget}`);
-                    const isCorrect = locType === 'LET' ? val === currentTarget : val === item.dataset.num;
-                    const fb = document.getElementById('feedback');
-                    fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
-                    if(isCorrect) setTimeout(startLocationRound, 600);
-                }
-                e.target.value = "";
-            }
-        };
-
-        buildGrid();
-        switchMode('LOCATION');
-    </script>
-</body>
-</html>
+        let timer = 90, lives = 5, matchesFound = 0, gameActive = false, first
