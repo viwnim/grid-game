@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- 
+  PROJECT: Grid Pro Master Trainer
+  LOGIC SUMMARY FOR AI CONTEXT:
+  - Grid: 2x14. Top Row (A-N / 1-14), Bottom Row (O-2 / 1-14).
+  - Mode [SEQUENCE]: Follows a Vertical Column Scan (A, O, B, P, C, Q...).
+  - Sequence Ordering: Uses "First-Member Logic".
+  - Scoring: Starts at 1250. -1000 pts over 90s (decay). -50 pts per life lost.
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Countdown Scoring</title>
+    <title>Grid Pro: Master Trainer (Gold Master)</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -21,7 +29,7 @@
         input:checked + .slider:before { transform: translateX(20px); }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; }
-        #hud-area { height: 120px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #hud-area { height: 120px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
         #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; height: 2.5rem; }
         .heart { color: var(--red); }
         .heart.lost { color: #333; }
@@ -107,8 +115,7 @@
         const allLetters = [...lettersTop, ...lettersBottom];
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
-        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
-        let timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
 
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
@@ -122,7 +129,7 @@
             div.className = 'item'; div.id = 'item-' + l;
             const label = document.createElement('div');
             label.className = 'train-label ' + labelClass;
-            label.innerText = locType === 'LET' ? l : num;
+            label.innerText = (locType === 'LET') ? l : num;
             div.appendChild(label);
             for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
             div.onclick = () => handleItemClick(div);
@@ -174,19 +181,6 @@
             else if (currentMode === 'LOCATION') startLocationRound();
         }
 
-        function initGameMode() {
-            timer = 90; lives = 5; matchesFound = 0; score = 1250; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD(); updateHearts();
-            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            allLetters.forEach((l, i) => {
-                const item = document.getElementById('item-' + l);
-                item.classList.remove('invisible', 'matched');
-                item.dataset.color = shuffled[i];
-                applyColor(item, shuffled[i], true);
-            });
-            document.getElementById('start-btn').classList.add('hidden');
-        }
-
         function initSequenceMode() {
             gameActive = false; lives = 5; score = 1250; timer = 90; clearInterval(interval); updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
@@ -196,12 +190,14 @@
                 item.dataset.color = shuffled[i];
                 applyColor(item, shuffled[i], true);
             });
+
             const pairMap = {};
             allLetters.forEach(l => {
                 const color = document.getElementById('item-' + l).dataset.color;
                 if (!pairMap[color]) pairMap[color] = [];
                 pairMap[color].push(l);
             });
+
             const sequence = []; const usedColors = new Set();
             for (let i = 0; i < 14; i++) {
                 [lettersTop[i], lettersBottom[i]].forEach(l => {
@@ -217,8 +213,21 @@
             document.getElementById('start-btn').classList.add('hidden');
         }
 
+        function initGameMode() {
+            timer = 90; lives = 5; matchesFound = 0; score = 1250; gameActive = false; awaitingReset = false;
+            clearInterval(interval); updateHUD(); updateHearts();
+            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            allLetters.forEach((l, i) => {
+                const item = document.getElementById('item-' + l);
+                item.classList.remove('invisible', 'matched');
+                item.dataset.color = shuffled[i];
+                applyColor(item, shuffled[i], true);
+            });
+            document.getElementById('start-btn').classList.add('hidden');
+        }
+
         function handleItemClick(item) {
-            if (item.classList.contains('matched') || awaitingReset) return;
+            if (item.classList.contains('matched') || awaitingReset || currentMode === 'LOCATION') return;
             
             if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
                 gameActive = true;
@@ -228,7 +237,6 @@
             }
             
             if (currentMode === 'SEQUENCE') return;
-            if (currentMode === 'LOCATION') return;
             if (item === firstCard) return;
 
             applyColor(item, item.dataset.color, true);
@@ -237,20 +245,31 @@
             } else {
                 if (firstCard.dataset.color === item.dataset.color) {
                     const p1 = firstCard; const p2 = item;
+                    awaitingReset = true; // Briefly lock to show the match
                     setTimeout(() => { 
                         p1.classList.add('matched'); 
                         p2.classList.add('matched'); 
                         matchesFound++; 
+                        awaitingReset = false;
                         if(matchesFound === 14) endGame(true); 
                     }, 400);
                     firstCard = null;
                 } else {
                     lives--; 
-                    score = Math.max(0, score - 50); // Penalty for lost life
+                    score = Math.max(0, score - 50);
                     updateHearts(); 
                     awaitingReset = true; 
-                    showAllColors();
-                    if(lives <= 0) endGame(false);
+                    showAllColors(); // Show penalty reveal
+
+                    if(lives <= 0) {
+                        endGame(false);
+                    } else {
+                        // RE-LOCK LOGIC: Hide colors and let player continue after 1s
+                        setTimeout(() => {
+                            hideAllColors();
+                            awaitingReset = false;
+                        }, 1000);
+                    }
                     firstCard = null;
                 }
             }
@@ -258,13 +277,8 @@
 
         function checkSequence() {
             const val = document.getElementById('answer-input').value.toUpperCase().trim();
-            const panel = document.getElementById('result-panel');
-            panel.classList.remove('hidden');
-            if (val === correctSequence) {
-                endGame(true);
-            } else {
-                endGame(false);
-            }
+            if (val === correctSequence) endGame(true);
+            else endGame(false);
         }
 
         function endGame(win) {
@@ -310,7 +324,14 @@
 
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'matched', 'active-loc'); applyColor(i, '', false); }); }
         function startLocationRound() { resetBoard(); currentTarget = allLetters[Math.floor(Math.random()*28)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
-        function setLocType(t) { locType = t; buildGrid(); if(currentMode === 'LOCATION') startLocationRound(); }
+        
+        function setLocType(t) { 
+            locType = t; 
+            document.getElementById('btn-let').style.background = (t === 'LET') ? 'var(--accent)' : '#444';
+            document.getElementById('btn-num').style.background = (t === 'NUM') ? 'var(--accent)' : '#444';
+            buildGrid(); 
+            if(currentMode === 'LOCATION') startLocationRound(); 
+        }
 
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
@@ -319,7 +340,7 @@
                     const v = e.target.value.toUpperCase().trim();
                     const n = lettersTop.includes(currentTarget) ? lettersTop.indexOf(currentTarget)+1 : lettersBottom.indexOf(currentTarget)+1;
                     const isCorrect = locType === 'LET' ? v === currentTarget : v === n.toString();
-                    const fb = document.getElementById('feedback'); fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
+                    const fb = document.getElementById('feedback'); fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? (isCorrect ? "correct" : "wrong") : "";
                     if(isCorrect) setTimeout(startLocationRound, 600);
                 }
                 e.target.value = "";
