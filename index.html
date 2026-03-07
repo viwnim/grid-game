@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <!-- 
-  PROJECT: Grid Pro Master Trainer
+  PROJECT: Grid Pro Master Trainer (Hardcore Edition)
   LOGIC: 
-  - On Miss: Board reveals all colors and stays revealed.
-  - Next Click: Hides colors and resumes play.
+  - Continuous Decay: Timer and Score never pause once started.
+  - Manual Reset: On miss, board stays revealed until you click again.
+  - UI: Sequence Mode hides hearts for a cleaner focus.
 -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Master Trainer (Manual Reset)</title>
+    <title>Grid Pro: Master Trainer</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -180,7 +181,8 @@
         }
 
         function initSequenceMode() {
-            gameActive = false; lives = 5; score = 1250; timer = 90; clearInterval(interval); updateHearts();
+            gameActive = false; score = 1250; timer = 90; clearInterval(interval); 
+            updateHearts(); // Hearts will be hidden by the check inside updateHearts()
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
@@ -225,7 +227,7 @@
         }
 
         function handleItemClick(item) {
-            // NEW LOGIC: If we are currently showing mistakes, the next click hides everything and resumes.
+            // MANUAL RESET: If we are reviewing mistakes, any click hides and continues
             if (awaitingReset) {
                 hideAllColors();
                 awaitingReset = false;
@@ -250,7 +252,6 @@
             } else {
                 if (firstCard.dataset.color === item.dataset.color) {
                     const p1 = firstCard; const p2 = item;
-                    // Briefly lock to show the match being confirmed
                     awaitingReset = true; 
                     setTimeout(() => { 
                         p1.classList.add('matched'); 
@@ -268,9 +269,8 @@
                     if(lives <= 0) {
                         endGame(false);
                     } else {
-                        // REVEAL ALL COLORS AND PAUSE (stays until user clicks)
-                        showAllColors();
-                        awaitingReset = true; 
+                        showAllColors(); // Reveal all colors
+                        awaitingReset = true; // Wait for manual click reset
                     }
                     firstCard = null;
                 }
@@ -307,7 +307,8 @@
 
         function updateHearts() {
             const c = document.getElementById('hearts-container'); c.innerHTML = '';
-            if (currentMode === 'LOCATION') return;
+            // HIDE HEARTS in LOCATION and SEQUENCE modes
+            if (currentMode === 'LOCATION' || currentMode === 'SEQUENCE') return;
             for(let i=0; i<5; i++) {
                 const s = document.createElement('span'); s.className = i < lives ? 'heart' : 'heart lost';
                 s.innerHTML = '❤'; c.appendChild(s);
@@ -319,9 +320,7 @@
             let msCounter = 0;
             
             interval = setInterval(() => { 
-                if (awaitingReset) return; // Optional: pause timer while reviewing? 
-                // Note: If you want points to keep dropping while they study, remove the line above.
-
+                // TIMER NEVER STOPS (removed the awaitingReset check)
                 msCounter += 100;
                 score = Math.max(0, score - decayPer100ms);
                 if (msCounter % 1000 === 0) {
