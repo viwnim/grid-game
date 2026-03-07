@@ -16,8 +16,6 @@
             min-height: 100vh;
             margin: 0;
         }
-
-        /* Mode Toggle Styling */
         #mode-selector {
             margin-bottom: 30px;
             display: flex;
@@ -26,7 +24,6 @@
             border-radius: 12px;
             gap: 5px;
         }
-
         .mode-btn {
             padding: 10px 25px;
             cursor: pointer;
@@ -37,25 +34,21 @@
             border-radius: 8px;
             transition: 0.2s;
         }
-
         .mode-btn.active {
             background: #007bff;
             color: white;
             box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
         }
-
         #game-container {
             display: flex;
             flex-direction: column;
             gap: 25px;
             margin-bottom: 40px;
         }
-
         .row {
             display: flex;
             gap: 12px;
         }
-
         .item {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -67,7 +60,6 @@
             padding: 3px;
             background-color: black;
         }
-
         .circle {
             width: 100%;
             height: 100%;
@@ -76,18 +68,14 @@
             border: 1px solid #444;
             box-sizing: border-box;
         }
-
-        /* Active State */
-        .item.active { background-color: blue; border-color: #00ffff; }
-        .item.active .circle { background-color: blue; border-color: white; }
-
+        .item.active { background-color: blue !important; border-color: #00ffff; }
+        .item.active .circle { background-color: blue !important; border-color: white; }
         #controls {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 20px;
         }
-
         input {
             padding: 15px;
             font-size: 2rem;
@@ -100,6 +88,134 @@
             color: #000;
             outline: none;
         }
-
         #go-btn {
-            padding:
+            padding: 12px 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        #feedback {
+            font-size: 4rem;
+            height: 4.5rem;
+            line-height: 1;
+        }
+        .correct { color: #28a745; }
+        .wrong { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div id="mode-selector">
+        <button id="btn-let" class="mode-btn active">LET</button>
+        <button id="btn-num" class="mode-btn">NUM</button>
+    </div>
+
+    <div id="game-container">
+        <div class="row" id="top-row"></div>
+        <div class="row" id="bottom-row"></div>
+    </div>
+
+    <div id="controls">
+        <div id="feedback"></div>
+        <input type="text" id="answer-input" placeholder="?">
+        <button id="go-btn">GO</button>
+    </div>
+
+    <script>
+        const lettersTop = "ABCDEFGHIJKLMN".split("");
+        const lettersBottom = "OPQRSTUVWXYZ12".split("");
+        
+        const topRowEl = document.getElementById('top-row');
+        const bottomRowEl = document.getElementById('bottom-row');
+        const inputEl = document.getElementById('answer-input');
+        const feedbackEl = document.getElementById('feedback');
+        const goBtn = document.getElementById('go-btn');
+        
+        let currentMode = 'LET';
+        let currentTargetLetter = "";
+        let currentTargetIndex = "";
+
+        function buildGrid() {
+            topRowEl.innerHTML = '';
+            bottomRowEl.innerHTML = '';
+            lettersTop.forEach((letter, i) => createItem(topRowEl, letter, i + 1));
+            lettersBottom.forEach((letter, i) => createItem(bottomRowEl, letter, i + 1));
+        }
+
+        function createItem(container, letter, index) {
+            const item = document.createElement('div');
+            item.classList.add('item');
+            item.id = `item-${letter}`;
+            item.dataset.num = index.toString();
+            
+            for (let i = 0; i < 9; i++) {
+                const circle = document.createElement('div');
+                circle.classList.add('circle');
+                item.appendChild(circle);
+            }
+            container.appendChild(item);
+        }
+
+        function startGame() {
+            document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+            feedbackEl.textContent = "";
+            inputEl.value = "";
+            inputEl.focus();
+
+            const all = [...lettersTop, ...lettersBottom];
+            currentTargetLetter = all[Math.floor(Math.random() * all.length)];
+            
+            const activeEl = document.getElementById(`item-${currentTargetLetter}`);
+            if(activeEl) {
+                activeEl.classList.add('active');
+                currentTargetIndex = activeEl.dataset.num;
+            }
+        }
+
+        function checkAnswer() {
+            const val = inputEl.value.trim().toUpperCase();
+            if (!val) return;
+
+            const isCorrect = (currentMode === 'LET') 
+                ? (val === currentTargetLetter) 
+                : (val === currentTargetIndex);
+
+            if (isCorrect) {
+                feedbackEl.textContent = "✔";
+                feedbackEl.className = "correct";
+                setTimeout(startGame, 600);
+            } else {
+                feedbackEl.textContent = "✘";
+                feedbackEl.className = "wrong";
+                inputEl.value = "";
+            }
+        }
+
+        document.getElementById('btn-let').onclick = function() {
+            currentMode = 'LET';
+            this.classList.add('active');
+            document.getElementById('btn-num').classList.remove('active');
+            inputEl.maxLength = 1;
+            startGame();
+        };
+
+        document.getElementById('btn-num').onclick = function() {
+            currentMode = 'NUM';
+            this.classList.add('active');
+            document.getElementById('btn-let').classList.remove('active');
+            inputEl.maxLength = 2;
+            startGame();
+        };
+
+        goBtn.onclick = startGame;
+        inputEl.onkeyup = (e) => { if (e.key === 'Enter') checkAnswer(); };
+
+        buildGrid();
+        startGame();
+    </script>
+</body>
+</html>
