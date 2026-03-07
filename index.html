@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Column Scan Fixed</title>
+    <title>Grid Pro: Match Order Debugger</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -41,7 +41,7 @@
         input#answer-input { padding: 10px; font-size: 1.5rem; width: 220px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
         
-        #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 420px; }
+        #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 450px; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -86,7 +86,7 @@
 
         <div id="result-panel" class="hidden">
             <div id="res-title" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;"></div>
-            <div id="res-detail" style="margin-bottom:10px; font-family: monospace;"></div>
+            <div id="res-detail" style="margin-bottom:10px; font-family: monospace; font-size: 0.85rem; line-height: 1.4;"></div>
             <button style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="initCurrentMode()">NEW GAME</button>
             <button style="background:#444; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="showAllColors()">REVEAL</button>
         </div>
@@ -160,6 +160,7 @@
             gameActive = false; clearInterval(interval);
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             const all = [...lettersTop, ...lettersBottom];
+            
             all.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
                 item.classList.remove('invisible');
@@ -167,22 +168,36 @@
                 applyColor(item, shuffled[i], true);
             });
 
-            // FIXED SCAN LOGIC: Column by Column
-            const foundColors = [];
-            const matches = [];
+            // SCAN LOGIC
+            const history = {}; // Maps color string to the first letter it was found at
+            const orderedMatches = []; // List of pairs in order finalized
+            const secondOccurrences = []; // Just the letters for the answer
+
+            console.clear();
+            console.log("%c--- NEW SEQUENCE SCAN (Col 1-14) ---", "color: #007bff; font-weight: bold;");
+
             for (let i = 0; i < 14; i++) {
-                // Column i: Top Letter, then Bottom Letter
-                const pair = [lettersTop[i], lettersBottom[i]];
-                pair.forEach(letter => {
+                const colPair = [lettersTop[i], lettersBottom[i]];
+                colPair.forEach(letter => {
                     const color = document.getElementById('item-' + letter).dataset.color;
-                    if (foundColors.includes(color)) {
-                        matches.push(letter);
+                    if (history[color]) {
+                        // Found the second one!
+                        orderedMatches.push({pair: `${history[color]}-${letter}`, finalizedAt: letter});
+                        secondOccurrences.push(letter);
+                        console.log(`Match Found: ${history[color]} and ${letter} (Finalized at ${letter})`);
                     } else {
-                        foundColors.push(color);
+                        // First time seeing this color
+                        history[color] = letter;
                     }
                 });
             }
-            correctSequence = matches.slice(0, 6).join("");
+
+            correctSequence = secondOccurrences.slice(0, 6).join("");
+            
+            console.log("%cALL 14 PAIRS IN SCAN ORDER:", "color: #28a745; font-weight: bold;");
+            console.table(orderedMatches);
+            console.log("%cCORRECT 6-LETTER SEQUENCE:", "background: #222; color: #ffd700; padding: 5px;", correctSequence);
+
             document.getElementById('start-btn').classList.add('hidden');
         }
 
@@ -217,11 +232,11 @@
             panel.classList.remove('hidden');
             if (val === correctSequence) {
                 document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                document.getElementById('res-detail').innerHTML = "Match found!";
+                document.getElementById('res-detail').innerHTML = "All 6 matches correct.";
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "WRONG ❌";
-                document.getElementById('res-detail').innerHTML = "Expected: " + correctSequence + " | Got: " + (val || 'None');
+                document.getElementById('res-detail').innerHTML = `Expected: <b style="color:var(--accent)">${correctSequence}</b> | Got: <b style="color:var(--red)">${val || 'None'}</b><br><span style="font-size:0.7rem; color:#888;">Matches identified in order: ${correctSequence}...</span>`;
                 panel.style.borderColor = "var(--red)";
             }
             gameActive = false;
@@ -236,7 +251,7 @@
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = "Better luck next time.";
+                document.getElementById('res-detail').innerHTML = "Try again!";
                 panel.style.borderColor = "var(--red)";
             }
         }
@@ -253,6 +268,7 @@
         }
         function startTimer() { interval = setInterval(() => { timer--; updateHUD(); if(timer <= 0) endGame(false); }, 1000); }
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'active-loc'); applyColor(i, '', false); }); }
+        
         function initGameMode() {
             timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
             clearInterval(interval); updateHUD(); updateHearts();
@@ -270,7 +286,6 @@
                 if (currentMode === 'SEQUENCE') checkSequence();
                 else {
                     const v = e.target.value.toUpperCase().trim();
-                    const item = document.getElementById('item-'+currentTarget);
                     const n = lettersTop.includes(currentTarget) ? lettersTop.indexOf(currentTarget)+1 : lettersBottom.indexOf(currentTarget)+1;
                     const isCorrect = locType === 'LET' ? v === currentTarget : v === n.toString();
                     const fb = document.getElementById('feedback'); fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
