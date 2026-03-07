@@ -12,7 +12,6 @@
         .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; }
         .nav-btn.active { background: var(--accent); color: white; }
         
-        /* Training Toggle Styling */
         .toggle-wrap { margin-top: auto; padding-top: 20px; border-top: 1px solid #333; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -33,8 +32,7 @@
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; position: relative; }
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
 
-        /* Training Labels */
-        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; transition: 0.2s; }
+        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; transition: 0.2s; z-index: 10; }
         .top-label { top: -18px; }
         .bot-label { bottom: -18px; }
         body.training-on .train-label { opacity: 1; }
@@ -52,14 +50,11 @@
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; }
         .retry-btn { background: var(--accent); color: white; }
         .reveal-btn { background: #555; color: white; }
-        #feedback { font-size: 2rem; height: 2.5rem; font-weight: bold; }
-        .correct { color: var(--green); }
-        .wrong { color: var(--red); }
         .hidden { display: none !important; }
         .invisible { opacity: 0; pointer-events: none; }
     </style>
 </head>
-<body>
+<body class="training-on"> <!-- Start with training on to verify -->
 
     <div id="sidebar">
         <h2 style="font-size: 0.8rem; color: #555; letter-spacing: 1px; margin-bottom: 15px;">MODES</h2>
@@ -69,7 +64,7 @@
         
         <div class="toggle-wrap">
             <label class="switch">
-                <input type="checkbox" id="train-toggle" onchange="toggleTraining()">
+                <input type="checkbox" id="train-toggle" checked onchange="toggleTraining()">
                 <span class="slider"></span>
             </label>
             <span style="font-size: 0.8rem; font-weight: bold; color: #888;">TRAINING</span>
@@ -127,12 +122,10 @@
             const item = document.createElement('div');
             item.className = 'item'; item.id = `item-${l}`;
             item.dataset.letter = l; item.dataset.num = num;
-            
             const label = document.createElement('div');
             label.className = `train-label ${labelClass}`;
             label.innerText = locType === 'LET' ? l : num;
             item.appendChild(label);
-
             for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
             item.onclick = () => handleItemClick(item);
             return item;
@@ -184,6 +177,8 @@
         function initSequenceMode() {
             gameActive = false; clearInterval(interval);
             const shuffledColors = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            
+            // Build the map of what letter has what color
             const letterToColorMap = {};
             allLetters.forEach((letter, i) => {
                 const item = document.getElementById(`item-${letter}`);
@@ -193,13 +188,26 @@
                 letterToColorMap[letter] = color;
                 applyColor(item, color, true);
             });
+
+            // DEFINE SCAN ORDER: A, O, B, P, C, Q...
             const scanOrder = [];
-            for (let i = 0; i < 14; i++) { scanOrder.push(lettersTop[i]); scanOrder.push(lettersBottom[i]); }
-            const seenColors = new Set(); const resultChars = [];
+            for (let i = 0; i < 14; i++) {
+                scanOrder.push(lettersTop[i]);    // Col i Top
+                scanOrder.push(lettersBottom[i]); // Col i Bottom
+            }
+
+            // FIND SECOND MATCHES ALONG THAT PATH
+            const seenColors = new Set();
+            const resultChars = [];
             for (const letter of scanOrder) {
                 const color = letterToColorMap[letter];
-                if (seenColors.has(color)) resultChars.push(letter); else seenColors.add(color);
+                if (seenColors.has(color)) {
+                    resultChars.push(letter);
+                } else {
+                    seenColors.add(color);
+                }
             }
+
             correctSequence = resultChars.slice(0, 6).join("");
             document.getElementById('start-btn').classList.add('hidden');
         }
@@ -276,9 +284,7 @@
             });
             document.getElementById('start-btn').classList.add('hidden');
         }
-
         function setLocType(t) { locType = t; buildGrid(); switchMode('LOCATION'); }
-
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
                 if (currentMode === 'SEQUENCE') checkSequence();
@@ -293,7 +299,6 @@
                 e.target.value = "";
             }
         };
-
         buildGrid();
         switchMode('LOCATION');
     </script>
