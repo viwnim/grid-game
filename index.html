@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Sequence Debugger</title>
+    <title>Grid Pro: Column Scan Fixed</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         
         #sidebar { width: 180px; background: var(--sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid #333; flex-shrink: 0; }
-        .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; transition: 0.2s; }
+        .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; }
         .nav-btn.active { background: var(--accent); color: white; }
         
         .toggle-wrap { margin-top: auto; padding-top: 20px; border-top: 1px solid #333; }
@@ -20,31 +20,28 @@
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; position: relative; }
-        #hud-area { height: 80px; display: flex; flex-direction: column; align-items: center; }
-        #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; }
+        #hud-area { height: 80px; text-align: center; }
+        #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; justify-content: center; }
         .heart { color: var(--red); }
         .heart.lost { color: #333; }
 
-        #game-container { display: flex; flex-direction: column; gap: 20px; margin-bottom: 25px; }
-        .row { display: flex; gap: 8px; position: relative; }
+        #game-container { display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px; }
+        .row { display: flex; gap: 8px; }
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; position: relative; }
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
 
-        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; z-index: 10; }
-        .top-label { top: -20px; }
-        .bot-label { bottom: -20px; }
+        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; }
+        .top-label { top: -22px; }
+        .bot-label { bottom: -22px; }
         body.training-on .train-label { opacity: 1; }
 
-        .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; box-sizing: border-box; pointer-events: none; }
-        .item.active-loc .circle { background: blue !important; border-color: white !important; }
-
-        #controls { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; pointer-events: none; }
+        #controls { display: flex; flex-direction: column; align-items: center; }
         input#answer-input { padding: 10px; font-size: 1.5rem; width: 220px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
         
-        #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid transparent; text-align: center; width: 420px; }
-        .res-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
+        #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 420px; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -68,10 +65,10 @@
     <div id="main-content">
         <div id="hud-area">
             <div id="hearts-container" class="hidden"></div>
-            <div id="timer-display" class="hidden" style="color:#888; font-family:monospace;">TIME: <span id="timer" style="color:white; font-weight:bold;">90</span>s</div>
+            <div id="timer-display" class="hidden">TIME: <span id="timer" style="color:white; font-weight:bold;">90</span>s</div>
         </div>
 
-        <div id="loc-subnav" style="margin-bottom: 25px;">
+        <div id="loc-subnav" style="margin-bottom: 30px;">
             <button id="btn-let" onclick="setLocType('LET')" style="background:var(--accent); color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">LET</button>
             <button id="btn-num" onclick="setLocType('NUM')" style="background:#444; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">NUM</button>
         </div>
@@ -88,8 +85,8 @@
         </div>
 
         <div id="result-panel" class="hidden">
-            <div id="res-title" class="res-title"></div>
-            <div id="res-detail" style="margin-bottom:10px; font-size: 0.9rem;"></div>
+            <div id="res-title" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;"></div>
+            <div id="res-detail" style="margin-bottom:10px; font-family: monospace;"></div>
             <button style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="initCurrentMode()">NEW GAME</button>
             <button style="background:#444; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="showAllColors()">REVEAL</button>
         </div>
@@ -98,11 +95,9 @@
     <script>
         const lettersTop = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"];
         const lettersBottom = ["O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2"];
-        const allLetters = [...lettersTop, ...lettersBottom];
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
-        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
-        let timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
 
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
@@ -112,16 +107,15 @@
         }
 
         function createItem(l, num, labelClass) {
-            const item = document.createElement('div');
-            item.className = 'item'; item.id = `item-${l}`;
-            item.dataset.letter = l;
+            const div = document.createElement('div');
+            div.className = 'item'; div.id = 'item-' + l;
             const label = document.createElement('div');
-            label.className = `train-label ${labelClass}`;
+            label.className = 'train-label ' + labelClass;
             label.innerText = locType === 'LET' ? l : num;
-            item.appendChild(label);
-            for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
-            item.onclick = () => handleItemClick(item);
-            return item;
+            div.appendChild(label);
+            for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
+            div.onclick = () => handleItemClick(div);
+            return div;
         }
 
         function applyColor(item, type, isVisible) {
@@ -165,27 +159,30 @@
         function initSequenceMode() {
             gameActive = false; clearInterval(interval);
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            allLetters.forEach((letter, i) => {
-                const item = document.getElementById(`item-${letter}`);
+            const all = [...lettersTop, ...lettersBottom];
+            all.forEach((l, i) => {
+                const item = document.getElementById('item-' + l);
                 item.classList.remove('invisible');
                 item.dataset.color = shuffled[i];
                 applyColor(item, shuffled[i], true);
             });
 
-            // Path: A, O, B, P, C, Q...
-            const path = [];
-            for(let i=0; i<14; i++) { path.push(lettersTop[i]); path.push(lettersBottom[i]); }
-
-            const history = [];
+            // FIXED SCAN LOGIC: Column by Column
+            const foundColors = [];
             const matches = [];
-            path.forEach(l => {
-                const color = document.getElementById(`item-${l}`).dataset.color;
-                if (history.includes(color)) matches.push(l);
-                else history.push(color);
-            });
+            for (let i = 0; i < 14; i++) {
+                // Column i: Top Letter, then Bottom Letter
+                const pair = [lettersTop[i], lettersBottom[i]];
+                pair.forEach(letter => {
+                    const color = document.getElementById('item-' + letter).dataset.color;
+                    if (foundColors.includes(color)) {
+                        matches.push(letter);
+                    } else {
+                        foundColors.push(color);
+                    }
+                });
+            }
             correctSequence = matches.slice(0, 6).join("");
-            console.log("LOGIC CHECK: Scan Path Order is:", path);
-            console.log("LOGIC CHECK: Found Sequence is:", correctSequence);
             document.getElementById('start-btn').classList.add('hidden');
         }
 
@@ -205,7 +202,7 @@
             else {
                 if (firstCard.dataset.color === item.dataset.color) {
                     const p = [firstCard, item];
-                    setTimeout(() => { p.forEach(card => card.classList.add('invisible')); matchesFound++; if(matchesFound === 14) endGame(true); }, 400);
+                    setTimeout(() => { p.forEach(c => c.classList.add('invisible')); matchesFound++; if(matchesFound === 14) endGame(true); }, 400);
                     firstCard = null;
                 } else {
                     lives--; updateHearts(); awaitingReset = true; showAllColors();
@@ -220,11 +217,11 @@
             panel.classList.remove('hidden');
             if (val === correctSequence) {
                 document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                document.getElementById('res-detail').innerHTML = "Sequence Matched perfectly.";
+                document.getElementById('res-detail').innerHTML = "Match found!";
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "WRONG ❌";
-                document.getElementById('res-detail').innerHTML = `Expected: <b style="color:var(--accent)">${correctSequence}</b> | Got: <b style="color:var(--red)">${val || 'None'}</b>`;
+                document.getElementById('res-detail').innerHTML = "Expected: " + correctSequence + " | Got: " + (val || 'None');
                 panel.style.borderColor = "var(--red)";
             }
             gameActive = false;
@@ -239,7 +236,7 @@
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = "Try a new round!";
+                document.getElementById('res-detail').innerHTML = "Better luck next time.";
                 panel.style.borderColor = "var(--red)";
             }
         }
@@ -260,10 +257,11 @@
             timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
             clearInterval(interval); updateHUD(); updateHearts();
             const s = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            allLetters.forEach((l, i) => { const item = document.getElementById('item-'+l); item.classList.remove('invisible'); item.dataset.color = s[i]; applyColor(item, s[i], true); });
+            const all = [...lettersTop, ...lettersBottom];
+            all.forEach((l, i) => { const item = document.getElementById('item-'+l); item.classList.remove('invisible'); item.dataset.color = s[i]; applyColor(item, s[i], true); });
             document.getElementById('start-btn').classList.add('hidden');
         }
-        function startLocationRound() { resetBoard(); currentTarget = allLetters[Math.floor(Math.random()*allLetters.length)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
+        function startLocationRound() { resetBoard(); currentTarget = [...lettersTop, ...lettersBottom][Math.floor(Math.random()*28)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
         function setLocType(t) { locType = t; buildGrid(); switchMode('LOCATION'); }
         function toggleTraining() { document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked); }
 
