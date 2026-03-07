@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grid Pro: Location & Game</title>
     <style>
-        :root {
-            --bg: #121212;
-            --sidebar: #1e1e1e;
-            --accent: #007bff;
-        }
+        :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --gold: #ffd700; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         
         #sidebar { width: 180px; background: var(--sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid #333; flex-shrink: 0; }
@@ -18,20 +14,40 @@
         
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         
-        #game-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        #hearts-container { display: flex; gap: 10px; margin-bottom: 15px; font-size: 2rem; }
+        .heart { color: var(--red); transition: color 0.3s; }
+        .heart.lost { color: #333; }
+
+        #game-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; position: relative; }
         .row { display: flex; gap: 8px; }
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; position: relative; }
         .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; box-sizing: border-box; pointer-events: none; }
         
-        /* Location Mode */
         .item.active-loc .circle { background: blue !important; border-color: white !important; }
 
-        #hud { margin-bottom: 20px; display: flex; gap: 30px; font-size: 1.1rem; font-family: monospace; color: #aaa; }
+        #hud { margin-bottom: 10px; display: flex; gap: 30px; font-size: 1.1rem; font-family: monospace; color: #aaa; }
         #hud span { color: white; font-weight: bold; }
         
         input { padding: 10px; font-size: 1.5rem; width: 80px; text-align: center; border-radius: 8px; border: none; margin-bottom: 10px; }
-        button#start-btn { padding: 12px 40px; font-size: 1.1rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; }
+        button#start-btn { padding: 12px 40px; font-size: 1.1rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 10; }
         
+        /* Modal Overlay */
+        #game-modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid var(--accent);
+            text-align: center;
+            z-index: 100;
+            min-width: 250px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+        #modal-title { font-size: 2.5rem; margin-bottom: 10px; }
+        #modal-score { font-size: 1.5rem; margin-bottom: 20px; color: var(--gold); font-weight: bold; }
+
         #feedback { font-size: 3rem; height: 3.5rem; font-weight: bold; }
         .correct { color: #28a745; }
         .wrong { color: #dc3545; }
@@ -49,9 +65,9 @@
     </div>
 
     <div id="main-content">
+        <div id="hearts-container" class="hidden"></div>
         <div id="hud" class="hidden">
             <div>TIME: <span id="timer">90</span>s</div>
-            <div>LIVES: <span id="lives">5</span></div>
         </div>
 
         <div id="loc-subnav" style="margin-bottom: 15px;">
@@ -60,6 +76,11 @@
         </div>
 
         <div id="game-container">
+            <div id="game-modal" class="hidden">
+                <div id="modal-title"></div>
+                <div id="modal-score"></div>
+                <button id="modal-btn" onclick="initGameMode()" style="background:var(--accent); color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">PLAY AGAIN</button>
+            </div>
             <div class="row" id="top-row"></div>
             <div class="row" id="bottom-row"></div>
         </div>
@@ -75,19 +96,14 @@
 
     <script>
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12".split("");
-        let currentMode = 'LOCATION';
-        let locType = 'LET';
-        let currentTarget = "";
-        
-        // Game Logic
-        let timer = 90, lives = 5, matchesFound = 0;
-        let gameActive = false, firstCard = null, awaitingReset = false, interval = null;
+        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
+        let timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null;
 
         const colorPairs = [
             's-yellow', 's-red', 's-green', 's-purple', 's-blue',
             'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green',
             'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red',
-            'b-yellow-d-blue', 'b-yellow-d-green', 'b-red-d-green-alt'
+            'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'
         ];
 
         function buildGrid() {
@@ -106,28 +122,42 @@
         function applyColor(item, type, isVisible) {
             const circles = item.querySelectorAll('.circle');
             circles.forEach(c => { c.style.background = 'black'; c.style.borderColor = isVisible ? '#333' : '#1a1a1a'; });
-            if (!isVisible) return;
+            if (!isVisible || !type) return;
 
             if (type.startsWith('s-')) {
-                const cName = type.split('-')[1];
-                circles.forEach(c => { c.style.background = cName; c.style.borderColor = 'white'; });
+                const color = type.split('-')[1];
+                circles.forEach(c => { c.style.background = color; c.style.borderColor = 'white'; });
             } else {
-                const p = type.split('-'); // b-red-d-green
+                const p = type.split('-');
+                const borderColor = p[1], dotColor = p[3];
                 circles.forEach((c, i) => { 
-                    c.style.borderColor = p[1]; 
-                    if(i === 4) c.style.background = p[3]; 
+                    if(i === 4) { c.style.background = dotColor; c.style.borderColor = 'white'; }
+                    else { c.style.background = borderColor; c.style.borderColor = 'rgba(255,255,255,0.3)'; }
                 });
+            }
+        }
+
+        function updateHearts() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const span = document.createElement('span');
+                span.className = i < lives ? 'heart' : 'heart lost';
+                span.innerHTML = '❤';
+                container.appendChild(span);
             }
         }
 
         function switchMode(mode) {
             currentMode = mode;
+            document.getElementById('game-modal').classList.add('hidden');
             document.getElementById('nav-loc').classList.toggle('active', mode === 'LOCATION');
             document.getElementById('nav-game').classList.toggle('active', mode === 'GAME');
             document.getElementById('loc-subnav').classList.toggle('hidden', mode === 'GAME');
             document.getElementById('loc-input-area').classList.toggle('hidden', mode === 'GAME');
             document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
             document.getElementById('hud').classList.toggle('hidden', mode === 'LOCATION');
+            document.getElementById('hearts-container').classList.toggle('hidden', mode === 'LOCATION');
             resetBoard();
             if(mode === 'LOCATION') startLocationRound();
         }
@@ -140,8 +170,9 @@
         }
 
         function initGameMode() {
+            document.getElementById('game-modal').classList.add('hidden');
             timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD();
+            clearInterval(interval); updateHUD(); updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             document.querySelectorAll('.item').forEach((item, i) => {
                 item.classList.remove('invisible', 'active-loc');
@@ -153,20 +184,10 @@
 
         function handleItemClick(item) {
             if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
-            
-            if (awaitingReset) {
-                hideAllColors();
-                awaitingReset = false;
-                return;
-            }
-
-            if (!gameActive) {
-                startTimer();
-                hideAllColors();
-                gameActive = true;
-            }
-
+            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
+            if (!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
             if (item === firstCard) return;
+
             applyColor(item, item.dataset.color, true);
 
             if (!firstCard) {
@@ -181,7 +202,7 @@
                     }, 400);
                     firstCard = null;
                 } else {
-                    lives--; updateHUD();
+                    lives--; updateHUD(); updateHearts();
                     awaitingReset = true;
                     showAllColors();
                     if (lives <= 0) endGame(false);
@@ -192,7 +213,7 @@
 
         function showAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, i.dataset.color, true)); }
         function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
-        function updateHUD() { document.getElementById('timer').innerText = timer; document.getElementById('lives').innerText = lives; }
+        function updateHUD() { document.getElementById('timer').innerText = timer; }
 
         function startTimer() {
             interval = setInterval(() => {
@@ -204,8 +225,21 @@
         function endGame(win) {
             gameActive = false; clearInterval(interval);
             const score = win ? Math.round(1000 * (timer / 90) + (50 * lives)) : 0;
-            alert(win ? `WINNER! Score: ${score}` : "GAME OVER");
-            document.getElementById('start-btn').classList.remove('hidden');
+            
+            const modal = document.getElementById('game-modal');
+            const title = document.getElementById('modal-title');
+            const scoreEl = document.getElementById('modal-score');
+            
+            modal.classList.remove('hidden');
+            if (win) {
+                title.innerHTML = "WINNER! 🏆";
+                scoreEl.innerHTML = "Score: " + score + " 🌟";
+                modal.style.borderColor = "#28a745";
+            } else {
+                title.innerHTML = "GAME OVER 💀";
+                scoreEl.innerHTML = "Better luck next time! 🍀";
+                modal.style.borderColor = "#dc3545";
+            }
         }
 
         function resetBoard() {
