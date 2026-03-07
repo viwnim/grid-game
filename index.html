@@ -12,30 +12,30 @@
         }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         
-        /* Sidebar Navigation */
-        #sidebar { width: 200px; background: var(--sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid #333; }
-        .nav-btn { padding: 15px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 8px; font-weight: bold; text-align: left; transition: 0.3s; }
+        #sidebar { width: 180px; background: var(--sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid #333; flex-shrink: 0; }
+        .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; }
         .nav-btn.active { background: var(--accent); color: white; }
         
-        /* Main Area */
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         
-        /* Shared Grid Styling */
-        #game-container { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+        #game-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
         .row { display: flex; gap: 8px; }
-        .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; transition: 0.2s; position: relative; }
+        .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; position: relative; }
         .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; box-sizing: border-box; pointer-events: none; }
         
-        /* Location Mode Classes */
-        .item.active-loc { background: blue !important; border-color: cyan; }
-        .item.active-loc .circle { background: blue !important; border-color: white; }
+        /* Location Mode */
+        .item.active-loc .circle { background: blue !important; border-color: white !important; }
+
+        #hud { margin-bottom: 20px; display: flex; gap: 30px; font-size: 1.1rem; font-family: monospace; color: #aaa; }
+        #hud span { color: white; font-weight: bold; }
         
-        /* UI Elements */
-        #hud { margin-bottom: 20px; display: flex; gap: 30px; font-size: 1.2rem; font-family: monospace; }
-        #controls { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        input { padding: 10px; font-size: 1.5rem; width: 80px; text-align: center; border-radius: 8px; background: white; color: black; border: none; }
-        button#start-btn { padding: 12px 40px; font-size: 1.2rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; }
-        #feedback { font-size: 3rem; height: 3.5rem; }
+        input { padding: 10px; font-size: 1.5rem; width: 80px; text-align: center; border-radius: 8px; border: none; margin-bottom: 10px; }
+        button#start-btn { padding: 12px 40px; font-size: 1.1rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; }
+        
+        #feedback { font-size: 3rem; height: 3.5rem; font-weight: bold; }
+        .correct { color: #28a745; }
+        .wrong { color: #dc3545; }
+        
         .hidden { display: none !important; }
         .invisible { opacity: 0; pointer-events: none; }
     </style>
@@ -43,23 +43,20 @@
 <body>
 
     <div id="sidebar">
-        <h2 style="font-size: 1rem; color: #555; margin-bottom: 20px;">MODES</h2>
-        <button class="nav-btn active" onclick="switchMode('LOCATION')">LOCATION</button>
-        <button class="nav-btn" onclick="switchMode('GAME')">GAME</button>
+        <h2 style="font-size: 0.8rem; color: #555; letter-spacing: 1px; margin-bottom: 15px;">MODES</h2>
+        <button id="nav-loc" class="nav-btn active" onclick="switchMode('LOCATION')">LOCATION</button>
+        <button id="nav-game" class="nav-btn" onclick="switchMode('GAME')">GAME</button>
     </div>
 
     <div id="main-content">
-        <!-- HUD for Game Mode -->
         <div id="hud" class="hidden">
             <div>TIME: <span id="timer">90</span>s</div>
             <div>LIVES: <span id="lives">5</span></div>
-            <div>SCORE: <span id="score">0</span></div>
         </div>
 
-        <!-- Mode Selector for Location -->
-        <div id="loc-subnav" style="margin-bottom: 20px;">
-            <button id="btn-let" onclick="setLocType('LET')" style="background:var(--accent); color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">LET</button>
-            <button id="btn-num" onclick="setLocType('NUM')" style="background:#444; color:white; border:none; padding:5px 15px; border-radius:4px; cursor:pointer;">NUM</button>
+        <div id="loc-subnav" style="margin-bottom: 15px;">
+            <button id="btn-let" onclick="setLocType('LET')" style="background:var(--accent); color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">LET</button>
+            <button id="btn-num" onclick="setLocType('NUM')" style="background:#444; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">NUM</button>
         </div>
 
         <div id="game-container">
@@ -77,46 +74,56 @@
     </div>
 
     <script>
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12".split("");
         let currentMode = 'LOCATION';
         let locType = 'LET';
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12".split("");
+        let currentTarget = "";
         
-        // Game State
-        let timer = 90;
-        let lives = 5;
-        let gameActive = false;
-        let firstCard = null;
-        let matchesFound = 0;
-        let interval;
+        // Game Logic
+        let timer = 90, lives = 5, matchesFound = 0;
+        let gameActive = false, firstCard = null, awaitingReset = false, interval = null;
 
         const colorPairs = [
-            'solid-yellow', 'solid-red', 'solid-green', 'solid-purple', 'solid-blue',
-            'border-red-dot-green', 'border-red-dot-yellow', 'border-blue-dot-green',
-            'border-purple-dot-blue', 'border-green-dot-yellow', 'border-green-dot-red',
-            'border-yellow-dot-blue', 'border-yellow-dot-green', 'border-red-dot-green-2'
+            's-yellow', 's-red', 's-green', 's-purple', 's-blue',
+            'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green',
+            'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red',
+            'b-yellow-d-blue', 'b-yellow-d-green', 'b-red-d-green-alt'
         ];
 
         function buildGrid() {
-            const top = document.getElementById('top-row');
-            const bottom = document.getElementById('bottom-row');
-            top.innerHTML = ''; bottom.innerHTML = '';
-
+            const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
+            top.innerHTML = ''; bot.innerHTML = '';
             letters.forEach((l, i) => {
                 const item = document.createElement('div');
-                item.className = 'item';
-                item.id = `item-${l}`;
-                item.dataset.letter = l;
-                item.dataset.num = (i % 14) + 1;
+                item.className = 'item'; item.id = `item-${l}`;
+                item.dataset.letter = l; item.dataset.num = (i % 14) + 1;
                 for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
-                
                 item.onclick = () => handleItemClick(item);
-                (i < 14 ? top : bottom).appendChild(item);
+                (i < 14 ? top : bot).appendChild(item);
             });
+        }
+
+        function applyColor(item, type, isVisible) {
+            const circles = item.querySelectorAll('.circle');
+            circles.forEach(c => { c.style.background = 'black'; c.style.borderColor = isVisible ? '#333' : '#1a1a1a'; });
+            if (!isVisible) return;
+
+            if (type.startsWith('s-')) {
+                const cName = type.split('-')[1];
+                circles.forEach(c => { c.style.background = cName; c.style.borderColor = 'white'; });
+            } else {
+                const p = type.split('-'); // b-red-d-green
+                circles.forEach((c, i) => { 
+                    c.style.borderColor = p[1]; 
+                    if(i === 4) c.style.background = p[3]; 
+                });
+            }
         }
 
         function switchMode(mode) {
             currentMode = mode;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.innerText === mode));
+            document.getElementById('nav-loc').classList.toggle('active', mode === 'LOCATION');
+            document.getElementById('nav-game').classList.toggle('active', mode === 'GAME');
             document.getElementById('loc-subnav').classList.toggle('hidden', mode === 'GAME');
             document.getElementById('loc-input-area').classList.toggle('hidden', mode === 'GAME');
             document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
@@ -125,119 +132,77 @@
             if(mode === 'LOCATION') startLocationRound();
         }
 
-        // --- LOCATION MODE LOGIC ---
-        let currentTarget = "";
-        function setLocType(type) {
-            locType = type;
-            document.getElementById('btn-let').style.background = type === 'LET' ? 'var(--accent)' : '#444';
-            document.getElementById('btn-num').style.background = type === 'NUM' ? 'var(--accent)' : '#444';
-            startLocationRound();
-        }
         function startLocationRound() {
             resetBoard();
             currentTarget = letters[Math.floor(Math.random() * letters.length)];
-            const el = document.getElementById(`item-${currentTarget}`);
-            el.classList.add('active-loc');
+            document.getElementById(`item-${currentTarget}`).classList.add('active-loc');
             document.getElementById('answer-input').focus();
         }
 
-        // --- GAME MODE LOGIC ---
         function initGameMode() {
-            gameActive = false;
-            timer = 90; lives = 5; matchesFound = 0;
-            clearInterval(interval);
-            updateHUD();
-            
+            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
+            clearInterval(interval); updateHUD();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             document.querySelectorAll('.item').forEach((item, i) => {
                 item.classList.remove('invisible', 'active-loc');
                 item.dataset.color = shuffled[i];
-                applyColor(item, shuffled[i]);
+                applyColor(item, shuffled[i], true);
             });
             document.getElementById('start-btn').classList.add('hidden');
         }
 
         function handleItemClick(item) {
-            if(currentMode === 'LOCATION') return;
-            if(!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
-            if(item.classList.contains('invisible') || item === firstCard) return;
+            if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
+            
+            if (awaitingReset) {
+                hideAllColors();
+                awaitingReset = false;
+                return;
+            }
 
-            showColor(item);
+            if (!gameActive) {
+                startTimer();
+                hideAllColors();
+                gameActive = true;
+            }
 
-            if(!firstCard) {
+            if (item === firstCard) return;
+            applyColor(item, item.dataset.color, true);
+
+            if (!firstCard) {
                 firstCard = item;
             } else {
-                if(firstCard.dataset.color === item.dataset.color) {
+                if (firstCard.dataset.color === item.dataset.color) {
+                    const pair = [firstCard, item];
                     setTimeout(() => {
-                        firstCard.classList.add('invisible');
-                        item.classList.add('invisible');
-                        firstCard = null;
+                        pair.forEach(p => p.classList.add('invisible'));
                         matchesFound++;
-                        if(matchesFound === 14) endGame(true);
-                    }, 300);
+                        if (matchesFound === 14) endGame(true);
+                    }, 400);
+                    firstCard = null;
                 } else {
-                    lives--;
-                    updateHUD();
-                    flashBoard();
-                    if(lives <= 0) endGame(false);
+                    lives--; updateHUD();
+                    awaitingReset = true;
+                    showAllColors();
+                    if (lives <= 0) endGame(false);
                     firstCard = null;
                 }
             }
         }
 
-        function applyColor(item, type) {
-            const circles = item.querySelectorAll('.circle');
-            circles.forEach(c => { c.style.background = 'black'; c.style.borderColor = '#333'; });
-            item.style.background = 'black';
-
-            if(type.startsWith('solid')) {
-                const color = type.split('-')[1];
-                item.style.background = color;
-                circles.forEach(c => { c.style.background = color; c.style.borderColor = 'white'; });
-            } else {
-                const parts = type.split('-');
-                const border = parts[1];
-                const dot = parts[3];
-                circles.forEach((c, i) => {
-                    c.style.borderColor = border;
-                    if(i === 4) c.style.background = dot;
-                });
-            }
-        }
-
-        function hideAllColors() {
-            document.querySelectorAll('.item').forEach(item => {
-                item.style.background = 'black';
-                item.querySelectorAll('.circle').forEach(c => {
-                    c.style.background = 'black';
-                    c.style.borderColor = '#333';
-                });
-            });
-        }
-
-        function showColor(item) { applyColor(item, item.dataset.color); }
-
-        function flashBoard() {
-            document.querySelectorAll('.item').forEach(item => { if(!item.classList.contains('invisible')) showColor(item); });
-            setTimeout(() => { if(gameActive) hideAllColors(); }, 1000);
-        }
+        function showAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, i.dataset.color, true)); }
+        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
+        function updateHUD() { document.getElementById('timer').innerText = timer; document.getElementById('lives').innerText = lives; }
 
         function startTimer() {
             interval = setInterval(() => {
-                timer--;
-                updateHUD();
-                if(timer <= 0) endGame(false);
+                timer--; updateHUD();
+                if (timer <= 0) endGame(false);
             }, 1000);
         }
 
-        function updateHUD() {
-            document.getElementById('timer').innerText = timer;
-            document.getElementById('lives').innerText = lives;
-        }
-
         function endGame(win) {
-            gameActive = false;
-            clearInterval(interval);
+            gameActive = false; clearInterval(interval);
             const score = win ? Math.round(1000 * (timer / 90) + (50 * lives)) : 0;
             alert(win ? `WINNER! Score: ${score}` : "GAME OVER");
             document.getElementById('start-btn').classList.remove('hidden');
@@ -247,24 +212,24 @@
             clearInterval(interval);
             document.querySelectorAll('.item').forEach(item => {
                 item.classList.remove('invisible', 'active-loc');
-                item.style.background = 'black';
-                item.querySelectorAll('.circle').forEach(c => {
-                    c.style.background = 'black';
-                    c.style.borderColor = '#333';
-                });
+                applyColor(item, '', false);
             });
         }
 
-        // Input Listener for Location Mode
+        function setLocType(type) {
+            locType = type;
+            document.getElementById('btn-let').style.background = type === 'LET' ? 'var(--accent)' : '#444';
+            document.getElementById('btn-num').style.background = type === 'NUM' ? 'var(--accent)' : '#444';
+            startLocationRound();
+        }
+
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
                 const val = e.target.value.toUpperCase();
                 const item = document.getElementById(`item-${currentTarget}`);
                 const isCorrect = locType === 'LET' ? val === currentTarget : val === item.dataset.num;
-                
                 const fb = document.getElementById('feedback');
-                fb.innerText = isCorrect ? "✔" : "✘";
-                fb.className = isCorrect ? "correct" : "wrong";
+                fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
                 if(isCorrect) setTimeout(startLocationRound, 600);
                 e.target.value = "";
             }
