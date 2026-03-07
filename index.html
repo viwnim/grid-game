@@ -2,16 +2,14 @@
 <html lang="en">
 <!-- 
   PROJECT: Grid Pro Master Trainer
-  LOGIC SUMMARY FOR AI CONTEXT:
-  - Grid: 2x14. Top Row (A-N / 1-14), Bottom Row (O-2 / 1-14).
-  - Mode [SEQUENCE]: Follows a Vertical Column Scan (A, O, B, P, C, Q...).
-  - Sequence Ordering: Uses "First-Member Logic".
-  - Scoring: Starts at 1250. -1000 pts over 90s (decay). -50 pts per life lost.
+  LOGIC: 
+  - On Miss: Board reveals all colors and stays revealed.
+  - Next Click: Hides colors and resumes play.
 -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Master Trainer (Gold Master)</title>
+    <title>Grid Pro: Master Trainer (Manual Reset)</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -227,7 +225,14 @@
         }
 
         function handleItemClick(item) {
-            if (item.classList.contains('matched') || awaitingReset || currentMode === 'LOCATION') return;
+            // NEW LOGIC: If we are currently showing mistakes, the next click hides everything and resumes.
+            if (awaitingReset) {
+                hideAllColors();
+                awaitingReset = false;
+                return;
+            }
+
+            if (item.classList.contains('matched') || currentMode === 'LOCATION') return;
             
             if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
                 gameActive = true;
@@ -245,7 +250,8 @@
             } else {
                 if (firstCard.dataset.color === item.dataset.color) {
                     const p1 = firstCard; const p2 = item;
-                    awaitingReset = true; // Briefly lock to show the match
+                    // Briefly lock to show the match being confirmed
+                    awaitingReset = true; 
                     setTimeout(() => { 
                         p1.classList.add('matched'); 
                         p2.classList.add('matched'); 
@@ -258,17 +264,13 @@
                     lives--; 
                     score = Math.max(0, score - 50);
                     updateHearts(); 
-                    awaitingReset = true; 
-                    showAllColors(); // Show penalty reveal
-
+                    
                     if(lives <= 0) {
                         endGame(false);
                     } else {
-                        // RE-LOCK LOGIC: Hide colors and let player continue after 1s
-                        setTimeout(() => {
-                            hideAllColors();
-                            awaitingReset = false;
-                        }, 1000);
+                        // REVEAL ALL COLORS AND PAUSE (stays until user clicks)
+                        showAllColors();
+                        awaitingReset = true; 
                     }
                     firstCard = null;
                 }
@@ -299,7 +301,7 @@
         function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
         
         function updateHUD() { 
-            document.getElementById('timer').innerText = timer; 
+            document.getElementById('timer').innerText = Math.ceil(timer); 
             document.getElementById('score').innerText = Math.floor(score); 
         }
 
@@ -313,13 +315,21 @@
         }
 
         function startTimer() { 
-            const decayPerSec = 1000 / 90;
+            const decayPer100ms = 1000 / 90 / 10;
+            let msCounter = 0;
+            
             interval = setInterval(() => { 
-                timer--; 
-                score = Math.max(0, score - decayPerSec);
+                if (awaitingReset) return; // Optional: pause timer while reviewing? 
+                // Note: If you want points to keep dropping while they study, remove the line above.
+
+                msCounter += 100;
+                score = Math.max(0, score - decayPer100ms);
+                if (msCounter % 1000 === 0) {
+                    timer--;
+                }
                 updateHUD(); 
                 if(timer <= 0) endGame(false); 
-            }, 1000); 
+            }, 100); 
         }
 
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'matched', 'active-loc'); applyColor(i, '', false); }); }
