@@ -20,37 +20,40 @@
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding-bottom: 50px; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; position: relative; }
         
-        #hearts-container { display: flex; gap: 10px; margin-bottom: 15px; font-size: 2rem; min-height: 2.5rem; }
+        /* Fixed HUD Section */
+        #hud-area { height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px; }
+        #hearts-container { display: flex; gap: 10px; font-size: 2rem; min-height: 2.5rem; margin-bottom: 5px; }
         .heart { color: var(--red); transition: color 0.3s; }
         .heart.lost { color: #333; }
+        #timer-display { font-size: 1.2rem; font-family: monospace; color: #aaa; }
+        #timer-display span { color: white; font-weight: bold; }
 
-        #game-container { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+        #game-container { display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px; }
         .row { display: flex; gap: 8px; position: relative; }
         
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; position: relative; }
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
 
         .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; transition: 0.2s; z-index: 10; }
-        .top-label { top: -18px; }
-        .bot-label { bottom: -18px; }
+        .top-label { top: -20px; }
+        .bot-label { bottom: -20px; }
         body.training-on .train-label { opacity: 1; }
 
         .circle { border-radius: 50%; background: black; border: 1px solid #333; width: 100%; height: 100%; box-sizing: border-box; pointer-events: none; }
         .item.active-loc .circle { background: blue !important; border-color: white !important; }
 
-        #controls { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        #controls { display: flex; flex-direction: column; align-items: center; width: 100%; margin-top: 10px; }
         input#answer-input { padding: 10px; font-size: 1.5rem; width: 220px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         
-        #result-panel { margin-top: 20px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid transparent; text-align: center; width: 420px; display: flex; flex-direction: column; align-items: center; }
+        #result-panel { margin-top: 20px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid transparent; text-align: center; width: 420px; }
         .res-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 5px; }
         .res-detail { font-size: 1.1rem; color: #ccc; margin-bottom: 10px; }
         
         button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; }
-        .retry-btn { background: var(--accent); color: white; padding: 10px 30px; }
-        .reveal-btn { background: #555; color: white; }
+        .retry-btn { background: var(--accent); color: white; }
         
         .hidden { display: none !important; }
         .invisible { opacity: 0; pointer-events: none; }
@@ -74,10 +77,12 @@
     </div>
 
     <div id="main-content">
-        <div id="hearts-container" class="hidden"></div>
-        <div id="hud" class="hidden"><div>TIME: <span id="timer">90</span>s</div></div>
+        <div id="hud-area">
+            <div id="hearts-container" class="hidden"></div>
+            <div id="timer-display" class="hidden">TIME: <span id="timer">90</span>s</div>
+        </div>
 
-        <div id="loc-subnav" style="margin-bottom: 15px;">
+        <div id="loc-subnav" style="margin-bottom: 25px;">
             <button id="btn-let" onclick="setLocType('LET')" style="background:var(--accent); color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">LET</button>
             <button id="btn-num" onclick="setLocType('NUM')" style="background:#444; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">NUM</button>
         </div>
@@ -96,9 +101,9 @@
         <div id="result-panel" class="hidden">
             <div id="res-title" class="res-title"></div>
             <div id="res-detail" class="res-detail"></div>
-            <div id="res-actions" style="display: flex; gap: 10px; justify-content: center;">
+            <div id="res-actions">
                 <button class="retry-btn" onclick="initCurrentMode()">NEW GAME</button>
-                <button id="reveal-btn" class="reveal-btn" onclick="showAllColors()">REVEAL BOARD</button>
+                <button class="reveal-btn" style="background:#555; color:white;" onclick="showAllColors()">REVEAL BOARD</button>
             </div>
         </div>
     </div>
@@ -107,7 +112,6 @@
         const lettersTop = "ABCDEFGHIJKLMN".split("");
         const lettersBottom = "OPQRSTUVWXYZ12".split("");
         const allLetters = [...lettersTop, ...lettersBottom];
-        
         let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
         let timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
 
@@ -133,9 +137,7 @@
             return item;
         }
 
-        function toggleTraining() {
-            document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked);
-        }
+        function toggleTraining() { document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked); }
 
         function applyColor(item, type, isVisible) {
             const circles = item.querySelectorAll('.circle');
@@ -159,9 +161,13 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id.includes(mode.toLowerCase().slice(0,3))));
             document.getElementById('loc-subnav').classList.toggle('hidden', mode !== 'LOCATION');
             document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
-            const hud = document.getElementById('hud'), hearts = document.getElementById('hearts-container');
-            hud.classList.add('hidden'); hearts.classList.add('hidden');
-            if (mode === 'GAME') { hud.classList.remove('hidden'); hearts.classList.remove('hidden'); }
+            
+            const hearts = document.getElementById('hearts-container');
+            const timerDisp = document.getElementById('timer-display');
+            
+            hearts.classList.toggle('hidden', mode === 'LOCATION');
+            timerDisp.classList.toggle('hidden', mode !== 'GAME');
+
             const inp = document.getElementById('answer-input');
             inp.placeholder = mode === 'SEQUENCE' ? "6 LETTERS" : "?";
             inp.style.width = mode === 'SEQUENCE' ? "220px" : "80px";
@@ -178,53 +184,43 @@
 
         function initSequenceMode() {
             gameActive = false; clearInterval(interval);
-            
-            // 1. Assign colors to letters randomly
             const shuffledColors = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             const letterToColorMap = {};
-            
             allLetters.forEach((letter, i) => {
                 const item = document.getElementById(`item-${letter}`);
                 item.classList.remove('invisible', 'active-loc');
-                const color = shuffledColors[i];
-                item.dataset.color = color;
-                letterToColorMap[letter] = color;
-                applyColor(item, color, true);
+                item.dataset.color = shuffledColors[i];
+                letterToColorMap[letter] = shuffledColors[i];
+                applyColor(item, shuffledColors[i], true);
             });
-
-            // 2. Define the exact path: Col 1 (T,B), Col 2 (T,B)...
             const scanPath = [];
-            for (let i = 0; i < 14; i++) {
-                scanPath.push(lettersTop[i]);    // e.g., 'A'
-                scanPath.push(lettersBottom[i]); // e.g., 'O'
-            }
-
-            // 3. Find matches along that path
-            const history = [];
-            const matches = [];
-            
+            for (let i = 0; i < 14; i++) { scanPath.push(lettersTop[i]); scanPath.push(lettersBottom[i]); }
+            const history = []; const matches = [];
             scanPath.forEach(letter => {
                 const color = letterToColorMap[letter];
-                if (history.includes(color)) {
-                    matches.push(letter);
-                } else {
-                    history.push(color);
-                }
+                if (history.includes(color)) matches.push(letter);
+                else history.push(color);
             });
-
             correctSequence = matches.slice(0, 6).join("");
-            console.log("Scan Path Trace:", scanPath);
-            console.log("Correct Sequence Found:", correctSequence);
-            
             document.getElementById('start-btn').classList.add('hidden');
         }
 
         function handleItemClick(item) {
             if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
-            if (currentMode === 'SEQUENCE') { if (!gameActive) { hideAllColors(); gameActive = true; } return; }
+            
+            // ONE-CLICK START LOGIC
+            if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
+                gameActive = true;
+                if (currentMode === 'GAME') startTimer();
+                hideAllColors();
+                // After hiding all, re-apply color only to the item just clicked so it stays visible
+                applyColor(item, item.dataset.color, true);
+            }
+
+            if (currentMode === 'SEQUENCE') return;
             if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
-            if (!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
             if (item === firstCard) return;
+
             applyColor(item, item.dataset.color, true);
             if (!firstCard) { firstCard = item; } 
             else {
@@ -264,7 +260,7 @@
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = "Try a new round!";
+                document.getElementById('res-detail').innerHTML = "Better luck next time!";
                 panel.style.borderColor = "var(--red)";
             }
         }
@@ -283,6 +279,7 @@
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(item => { item.classList.remove('invisible', 'active-loc'); applyColor(item, '', false); }); }
         
         function initGameMode() {
+            document.getElementById('result-panel').classList.add('hidden');
             timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
             clearInterval(interval); updateHUD(); updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
@@ -294,7 +291,6 @@
         }
         
         function setLocType(t) { locType = t; buildGrid(); switchMode('LOCATION'); }
-        
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
                 if (currentMode === 'SEQUENCE') checkSequence();
