@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Location & Game</title>
+    <title>Grid Pro: Master Trainer</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --gold: #ffd700; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -14,7 +14,7 @@
         
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         
-        #hearts-container { display: flex; gap: 10px; margin-bottom: 15px; font-size: 2rem; }
+        #hearts-container { display: flex; gap: 10px; margin-bottom: 15px; font-size: 2rem; min-height: 2.5rem; }
         .heart { color: var(--red); transition: color 0.3s; }
         .heart.lost { color: #333; }
 
@@ -28,27 +28,26 @@
         #hud { margin-bottom: 10px; display: flex; gap: 30px; font-size: 1.1rem; font-family: monospace; color: #aaa; }
         #hud span { color: white; font-weight: bold; }
         
-        input { padding: 10px; font-size: 1.5rem; width: 80px; text-align: center; border-radius: 8px; border: none; margin-bottom: 10px; }
-        button#start-btn { padding: 12px 40px; font-size: 1.1rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; z-index: 10; }
+        input { padding: 10px; font-size: 1.5rem; width: 180px; text-align: center; border-radius: 8px; border: none; margin-bottom: 10px; text-transform: uppercase; }
+        button#start-btn { padding: 12px 40px; font-size: 1.1rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; }
         
-        /* Modal Overlay */
         #game-modal {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(30, 30, 30, 0.95);
+            background: rgba(30, 30, 30, 0.98);
             padding: 30px;
             border-radius: 15px;
             border: 2px solid var(--accent);
             text-align: center;
             z-index: 100;
-            min-width: 250px;
+            min-width: 300px;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
-        #modal-title { font-size: 2.5rem; margin-bottom: 10px; }
-        #modal-score { font-size: 1.5rem; margin-bottom: 20px; color: var(--gold); font-weight: bold; }
+        #modal-title { font-size: 2rem; margin-bottom: 10px; }
+        #modal-score { font-size: 1.2rem; margin-bottom: 20px; color: var(--gold); line-height: 1.5; }
 
-        #feedback { font-size: 3rem; height: 3.5rem; font-weight: bold; }
+        #feedback { font-size: 2rem; height: 2.5rem; font-weight: bold; margin-bottom: 5px; }
         .correct { color: #28a745; }
         .wrong { color: #dc3545; }
         
@@ -62,6 +61,7 @@
         <h2 style="font-size: 0.8rem; color: #555; letter-spacing: 1px; margin-bottom: 15px;">MODES</h2>
         <button id="nav-loc" class="nav-btn active" onclick="switchMode('LOCATION')">LOCATION</button>
         <button id="nav-game" class="nav-btn" onclick="switchMode('GAME')">GAME</button>
+        <button id="nav-seq" class="nav-btn" onclick="switchMode('SEQUENCE')">SEQUENCE</button>
     </div>
 
     <div id="main-content">
@@ -79,7 +79,7 @@
             <div id="game-modal" class="hidden">
                 <div id="modal-title"></div>
                 <div id="modal-score"></div>
-                <button id="modal-btn" onclick="initGameMode()" style="background:var(--accent); color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">PLAY AGAIN</button>
+                <button id="modal-btn" onclick="initCurrentMode()" style="background:var(--accent); color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">RETRY</button>
             </div>
             <div class="row" id="top-row"></div>
             <div class="row" id="bottom-row"></div>
@@ -87,17 +87,21 @@
 
         <div id="controls">
             <div id="feedback"></div>
-            <div id="loc-input-area">
+            <div id="input-area">
                 <input type="text" id="answer-input" placeholder="?">
             </div>
-            <button id="start-btn" class="hidden" onclick="initGameMode()">START GAME</button>
+            <button id="start-btn" class="hidden" onclick="initCurrentMode()">START</button>
         </div>
     </div>
 
     <script>
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ12".split("");
+        const lettersTop = "ABCDEFGHIJKLMN".split("");
+        const lettersBottom = "OPQRSTUVWXYZ12".split("");
+        const allLetters = [...lettersTop, ...lettersBottom];
+        
         let currentMode = 'LOCATION', locType = 'LET', currentTarget = "";
         let timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null;
+        let correctSequence = "";
 
         const colorPairs = [
             's-yellow', 's-red', 's-green', 's-purple', 's-blue',
@@ -109,14 +113,26 @@
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
             top.innerHTML = ''; bot.innerHTML = '';
-            letters.forEach((l, i) => {
-                const item = document.createElement('div');
-                item.className = 'item'; item.id = `item-${l}`;
-                item.dataset.letter = l; item.dataset.num = (i % 14) + 1;
-                for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
-                item.onclick = () => handleItemClick(item);
-                (i < 14 ? top : bot).appendChild(item);
+            
+            // Build Top Row
+            lettersTop.forEach((l, i) => {
+                const item = createItem(l, i + 1);
+                top.appendChild(item);
             });
+            // Build Bottom Row
+            lettersBottom.forEach((l, i) => {
+                const item = createItem(l, i + 1);
+                bot.appendChild(item);
+            });
+        }
+
+        function createItem(l, num) {
+            const item = document.createElement('div');
+            item.className = 'item'; item.id = `item-${l}`;
+            item.dataset.letter = l; item.dataset.num = num;
+            for(let j=0; j<9; j++) item.appendChild(document.createElement('div')).className = 'circle';
+            item.onclick = () => handleItemClick(item);
+            return item;
         }
 
         function applyColor(item, type, isVisible) {
@@ -137,6 +153,135 @@
             }
         }
 
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('game-modal').classList.add('hidden');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id.includes(mode.toLowerCase().slice(0,3))));
+            document.getElementById('loc-subnav').classList.toggle('hidden', mode !== 'LOCATION');
+            document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
+            document.getElementById('hud').classList.toggle('hidden', mode === 'LOCATION');
+            document.getElementById('hearts-container').classList.toggle('hidden', mode === 'LOCATION');
+            
+            const inp = document.getElementById('answer-input');
+            inp.placeholder = mode === 'SEQUENCE' ? "6 LETTERS" : "?";
+            inp.style.width = mode === 'SEQUENCE' ? "220px" : "80px";
+            
+            resetBoard();
+            if(mode === 'LOCATION') startLocationRound();
+        }
+
+        function initCurrentMode() {
+            if (currentMode === 'GAME') initGameMode();
+            else if (currentMode === 'SEQUENCE') initSequenceMode();
+        }
+
+        function initSequenceMode() {
+            document.getElementById('game-modal').classList.add('hidden');
+            timer = 90; gameActive = false;
+            clearInterval(interval); updateHUD();
+            
+            // Assign 14 pairs randomly across 28 tiles
+            const shuffledColors = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            const items = document.querySelectorAll('.item');
+            
+            // Map colors to letters for logic check
+            const letterToColorMap = {};
+            allLetters.forEach((letter, i) => {
+                const item = document.getElementById(`item-${letter}`);
+                item.classList.remove('invisible', 'active-loc');
+                const color = shuffledColors[i];
+                item.dataset.color = color;
+                letterToColorMap[letter] = color;
+                applyColor(item, color, true);
+            });
+
+            // LOGIC: Column by Column Scan (1 to 14)
+            // Order: Col 1 Top (A), Col 1 Bot (O), Col 2 Top (B), Col 2 Bot (P)...
+            const scanOrder = [];
+            for (let i = 0; i < 14; i++) {
+                scanOrder.push(lettersTop[i]);
+                scanOrder.push(lettersBottom[i]);
+            }
+
+            const seenColors = new Set();
+            const resultChars = [];
+
+            for (const letter of scanOrder) {
+                const color = letterToColorMap[letter];
+                if (seenColors.has(color)) {
+                    resultChars.push(letter);
+                } else {
+                    seenColors.add(color);
+                }
+            }
+
+            correctSequence = resultChars.slice(0, 6).join("");
+            document.getElementById('start-btn').classList.add('hidden');
+        }
+
+        function handleItemClick(item) {
+            if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
+            
+            if (currentMode === 'SEQUENCE') {
+                if (!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
+                return;
+            }
+
+            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
+            if (!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
+            
+            if (item === firstCard) return;
+            applyColor(item, item.dataset.color, true);
+
+            if (!firstCard) { firstCard = item; } 
+            else {
+                if (firstCard.dataset.color === item.dataset.color) {
+                    const pair = [firstCard, item];
+                    setTimeout(() => { pair.forEach(p => p.classList.add('invisible')); matchesFound++; if (matchesFound === 14) endGame(true); }, 400);
+                    firstCard = null;
+                } else {
+                    lives--; updateHearts(); awaitingReset = true; showAllColors();
+                    if (lives <= 0) endGame(false);
+                    firstCard = null;
+                }
+            }
+        }
+
+        function checkSequence() {
+            const val = document.getElementById('answer-input').value.toUpperCase().trim();
+            if (val === correctSequence) {
+                endGame(true);
+            } else {
+                const modal = document.getElementById('game-modal');
+                modal.classList.remove('hidden');
+                document.getElementById('modal-title').innerHTML = "WRONG ❌";
+                document.getElementById('modal-score').innerHTML = `Expected: <span style="color:var(--accent)">${correctSequence}</span><br>Got: <span style="color:var(--red)">${val || 'nothing'}</span>`;
+                modal.style.borderColor = "var(--red)";
+                clearInterval(interval);
+                gameActive = false;
+            }
+        }
+
+        function endGame(win) {
+            gameActive = false; clearInterval(interval);
+            const modal = document.getElementById('game-modal');
+            modal.classList.remove('hidden');
+            if (win) {
+                const score = Math.round(1000 * (timer / 90) + (currentMode === 'GAME' ? 50 * lives : 0));
+                document.getElementById('modal-title').innerHTML = "WINNER! 🏆";
+                document.getElementById('modal-score').innerHTML = "Score: " + score + " 🌟";
+                modal.style.borderColor = "#28a745";
+            } else {
+                document.getElementById('modal-title').innerHTML = "GAME OVER 💀";
+                document.getElementById('modal-score').innerHTML = "Time's up! ⏳";
+                modal.style.borderColor = "#dc3545";
+            }
+        }
+
+        function showAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, i.dataset.color, true)); }
+        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
+        function updateHUD() { document.getElementById('timer').innerText = timer; }
+        
         function updateHearts() {
             const container = document.getElementById('hearts-container');
             container.innerHTML = '';
@@ -148,98 +293,11 @@
             }
         }
 
-        function switchMode(mode) {
-            currentMode = mode;
-            document.getElementById('game-modal').classList.add('hidden');
-            document.getElementById('nav-loc').classList.toggle('active', mode === 'LOCATION');
-            document.getElementById('nav-game').classList.toggle('active', mode === 'GAME');
-            document.getElementById('loc-subnav').classList.toggle('hidden', mode === 'GAME');
-            document.getElementById('loc-input-area').classList.toggle('hidden', mode === 'GAME');
-            document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
-            document.getElementById('hud').classList.toggle('hidden', mode === 'LOCATION');
-            document.getElementById('hearts-container').classList.toggle('hidden', mode === 'LOCATION');
-            resetBoard();
-            if(mode === 'LOCATION') startLocationRound();
-        }
-
-        function startLocationRound() {
-            resetBoard();
-            currentTarget = letters[Math.floor(Math.random() * letters.length)];
-            document.getElementById(`item-${currentTarget}`).classList.add('active-loc');
-            document.getElementById('answer-input').focus();
-        }
-
-        function initGameMode() {
-            document.getElementById('game-modal').classList.add('hidden');
-            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD(); updateHearts();
-            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            document.querySelectorAll('.item').forEach((item, i) => {
-                item.classList.remove('invisible', 'active-loc');
-                item.dataset.color = shuffled[i];
-                applyColor(item, shuffled[i], true);
-            });
-            document.getElementById('start-btn').classList.add('hidden');
-        }
-
-        function handleItemClick(item) {
-            if (currentMode === 'LOCATION' || item.classList.contains('invisible')) return;
-            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
-            if (!gameActive) { startTimer(); hideAllColors(); gameActive = true; }
-            if (item === firstCard) return;
-
-            applyColor(item, item.dataset.color, true);
-
-            if (!firstCard) {
-                firstCard = item;
-            } else {
-                if (firstCard.dataset.color === item.dataset.color) {
-                    const pair = [firstCard, item];
-                    setTimeout(() => {
-                        pair.forEach(p => p.classList.add('invisible'));
-                        matchesFound++;
-                        if (matchesFound === 14) endGame(true);
-                    }, 400);
-                    firstCard = null;
-                } else {
-                    lives--; updateHUD(); updateHearts();
-                    awaitingReset = true;
-                    showAllColors();
-                    if (lives <= 0) endGame(false);
-                    firstCard = null;
-                }
-            }
-        }
-
-        function showAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, i.dataset.color, true)); }
-        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
-        function updateHUD() { document.getElementById('timer').innerText = timer; }
-
         function startTimer() {
             interval = setInterval(() => {
                 timer--; updateHUD();
                 if (timer <= 0) endGame(false);
             }, 1000);
-        }
-
-        function endGame(win) {
-            gameActive = false; clearInterval(interval);
-            const score = win ? Math.round(1000 * (timer / 90) + (50 * lives)) : 0;
-            
-            const modal = document.getElementById('game-modal');
-            const title = document.getElementById('modal-title');
-            const scoreEl = document.getElementById('modal-score');
-            
-            modal.classList.remove('hidden');
-            if (win) {
-                title.innerHTML = "WINNER! 🏆";
-                scoreEl.innerHTML = "Score: " + score + " 🌟";
-                modal.style.borderColor = "#28a745";
-            } else {
-                title.innerHTML = "GAME OVER 💀";
-                scoreEl.innerHTML = "Better luck next time! 🍀";
-                modal.style.borderColor = "#dc3545";
-            }
         }
 
         function resetBoard() {
@@ -250,21 +308,33 @@
             });
         }
 
-        function setLocType(type) {
-            locType = type;
-            document.getElementById('btn-let').style.background = type === 'LET' ? 'var(--accent)' : '#444';
-            document.getElementById('btn-num').style.background = type === 'NUM' ? 'var(--accent)' : '#444';
-            startLocationRound();
+        function initGameMode() {
+            document.getElementById('game-modal').classList.add('hidden');
+            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
+            clearInterval(interval); updateHUD(); updateHearts();
+            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            allLetters.forEach((letter, i) => {
+                const item = document.getElementById(`item-${letter}`);
+                item.classList.remove('invisible', 'active-loc');
+                item.dataset.color = shuffled[i];
+                applyColor(item, shuffled[i], true);
+            });
+            document.getElementById('start-btn').classList.add('hidden');
         }
+
+        function setLocType(t) { locType = t; switchMode('LOCATION'); }
 
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
-                const val = e.target.value.toUpperCase();
-                const item = document.getElementById(`item-${currentTarget}`);
-                const isCorrect = locType === 'LET' ? val === currentTarget : val === item.dataset.num;
-                const fb = document.getElementById('feedback');
-                fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
-                if(isCorrect) setTimeout(startLocationRound, 600);
+                if (currentMode === 'SEQUENCE') checkSequence();
+                else {
+                    const val = e.target.value.toUpperCase().trim();
+                    const item = document.getElementById(`item-${currentTarget}`);
+                    const isCorrect = locType === 'LET' ? val === currentTarget : val === item.dataset.num;
+                    const fb = document.getElementById('feedback');
+                    fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? "correct" : "wrong";
+                    if(isCorrect) setTimeout(startLocationRound, 600);
+                }
                 e.target.value = "";
             }
         };
