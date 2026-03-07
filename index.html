@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grid Pro: Match Order Debugger</title>
+    <title>Grid Pro: First-Member Logic</title>
     <style>
         :root { --bg: #121212; --sidebar: #1e1e1e; --accent: #007bff; --red: #ff4d4d; --green: #28a745; }
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
@@ -21,8 +21,8 @@
         input:checked + .slider:before { transform: translateX(20px); }
 
         #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; }
-        #hud-area { height: 80px; text-align: center; }
-        #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; justify-content: center; }
+        #hud-area { height: 100px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; height: 2.5rem; }
         .heart { color: var(--red); }
         .heart.lost { color: #333; }
 
@@ -64,7 +64,7 @@
 
     <div id="main-content">
         <div id="hud-area">
-            <div id="hearts-container" class="hidden"></div>
+            <div id="hearts-container"></div>
             <div id="timer-display" class="hidden">TIME: <span id="timer" style="color:white; font-weight:bold;">90</span>s</div>
         </div>
 
@@ -81,7 +81,7 @@
         <div id="controls">
             <div id="feedback" style="font-size: 2rem; height: 2.5rem; font-weight: bold; margin-bottom: 5px;"></div>
             <input type="text" id="answer-input" placeholder="?">
-            <button id="start-btn" class="hidden" onclick="initCurrentMode()">START</button>
+            <button id="start-btn" onclick="initCurrentMode()">START</button>
         </div>
 
         <div id="result-panel" class="hidden">
@@ -95,6 +95,7 @@
     <script>
         const lettersTop = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"];
         const lettersBottom = ["O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2"];
+        const allLetters = [...lettersTop, ...lettersBottom];
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
         let currentMode = 'LOCATION', locType = 'LET', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
@@ -138,10 +139,10 @@
             currentMode = mode;
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id === 'nav-' + mode));
             document.getElementById('loc-subnav').classList.toggle('hidden', mode !== 'LOCATION');
-            document.getElementById('start-btn').classList.toggle('hidden', mode === 'LOCATION');
-            document.getElementById('hearts-container').classList.toggle('hidden', mode === 'LOCATION');
             document.getElementById('timer-display').classList.toggle('hidden', mode !== 'GAME');
             document.getElementById('result-panel').classList.add('hidden');
+            document.getElementById('start-btn').classList.remove('hidden');
+            updateHearts();
             const inp = document.getElementById('answer-input');
             inp.placeholder = (mode === 'SEQUENCE') ? "6 LETTERS" : "?";
             inp.style.width = (mode === 'SEQUENCE') ? "220px" : "80px";
@@ -154,50 +155,73 @@
             document.getElementById('feedback').innerText = "";
             if (currentMode === 'GAME') initGameMode();
             else if (currentMode === 'SEQUENCE') initSequenceMode();
+            else if (currentMode === 'LOCATION') startLocationRound();
         }
 
         function initSequenceMode() {
-            gameActive = false; clearInterval(interval);
+            gameActive = false; lives = 5; clearInterval(interval); updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            const all = [...lettersTop, ...lettersBottom];
-            
-            all.forEach((l, i) => {
+            allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
                 item.classList.remove('invisible');
                 item.dataset.color = shuffled[i];
                 applyColor(item, shuffled[i], true);
             });
 
-            // SCAN LOGIC
-            const history = {}; // Maps color string to the first letter it was found at
-            const orderedMatches = []; // List of pairs in order finalized
-            const secondOccurrences = []; // Just the letters for the answer
+            // NEW LOGIC: Match based on FIRST tile encountered
+            const colorToFirstLetter = {};
+            const sequence = [];
 
             console.clear();
-            console.log("%c--- NEW SEQUENCE SCAN (Col 1-14) ---", "color: #007bff; font-weight: bold;");
+            console.log("%c--- NEW SEQUENCE SCAN (Ordered by First Tile) ---", "color: #007bff; font-weight: bold;");
 
+            // Define the Scan Path
+            const scanPath = [];
             for (let i = 0; i < 14; i++) {
-                const colPair = [lettersTop[i], lettersBottom[i]];
-                colPair.forEach(letter => {
-                    const color = document.getElementById('item-' + letter).dataset.color;
-                    if (history[color]) {
-                        // Found the second one!
-                        orderedMatches.push({pair: `${history[color]}-${letter}`, finalizedAt: letter});
-                        secondOccurrences.push(letter);
-                        console.log(`Match Found: ${history[color]} and ${letter} (Finalized at ${letter})`);
-                    } else {
-                        // First time seeing this color
-                        history[color] = letter;
-                    }
-                });
+                scanPath.push(lettersTop[i]);
+                scanPath.push(lettersBottom[i]);
             }
 
-            correctSequence = secondOccurrences.slice(0, 6).join("");
-            
-            console.log("%cALL 14 PAIRS IN SCAN ORDER:", "color: #28a745; font-weight: bold;");
-            console.table(orderedMatches);
-            console.log("%cCORRECT 6-LETTER SEQUENCE:", "background: #222; color: #ffd700; padding: 5px;", correctSequence);
+            // Map all colors to their pairs
+            const pairMap = {};
+            allLetters.forEach(l => {
+                const color = document.getElementById('item-' + l).dataset.color;
+                if (!pairMap[color]) pairMap[color] = [];
+                pairMap[color].push(l);
+            });
 
+            // Walk the path and grab the partner of the FIRST tile we see
+            const usedColors = new Set();
+            scanPath.forEach(l => {
+                const color = document.getElementById('item-' + l).dataset.color;
+                if (!usedColors.has(color)) {
+                    // This is the FIRST time we've seen this color
+                    const pair = pairMap[color];
+                    const partner = pair[0] === l ? pair[1] : pair[0];
+                    sequence.push(partner);
+                    usedColors.add(color);
+                    console.log(`Scan hit ${l}. Its partner is ${partner}. Adding ${partner} to sequence.`);
+                }
+            });
+
+            correctSequence = sequence.slice(0, 6).join("");
+            console.log("%cFULL PARTNER SEQUENCE:", "color: #28a745; font-weight: bold;", sequence);
+            console.log("%cEXPECTED 6-LETTER GUESS:", "background: #222; color: #ffd700; padding: 5px;", correctSequence);
+            
+            document.getElementById('start-btn').classList.add('hidden');
+        }
+
+        // Rest of the supporting functions (initGameMode, handleItemClick, etc.) stay the same...
+        function initGameMode() {
+            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
+            clearInterval(interval); updateHUD(); updateHearts();
+            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            allLetters.forEach((l, i) => {
+                const item = document.getElementById('item-' + l);
+                item.classList.remove('invisible');
+                item.dataset.color = shuffled[i];
+                applyColor(item, shuffled[i], true);
+            });
             document.getElementById('start-btn').classList.add('hidden');
         }
 
@@ -232,11 +256,11 @@
             panel.classList.remove('hidden');
             if (val === correctSequence) {
                 document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                document.getElementById('res-detail').innerHTML = "All 6 matches correct.";
+                document.getElementById('res-detail').innerHTML = "Sequence Correct!";
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "WRONG ❌";
-                document.getElementById('res-detail').innerHTML = `Expected: <b style="color:var(--accent)">${correctSequence}</b> | Got: <b style="color:var(--red)">${val || 'None'}</b><br><span style="font-size:0.7rem; color:#888;">Matches identified in order: ${correctSequence}...</span>`;
+                document.getElementById('res-detail').innerHTML = `Expected: ${correctSequence} | Got: ${val || 'None'}`;
                 panel.style.borderColor = "var(--red)";
             }
             gameActive = false;
@@ -251,7 +275,7 @@
                 panel.style.borderColor = "var(--green)";
             } else {
                 document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = "Try again!";
+                document.getElementById('res-detail').innerHTML = "Better luck next time.";
                 panel.style.borderColor = "var(--red)";
             }
         }
@@ -261,6 +285,7 @@
         function updateHUD() { document.getElementById('timer').innerText = timer; }
         function updateHearts() {
             const c = document.getElementById('hearts-container'); c.innerHTML = '';
+            if (currentMode === 'LOCATION') return;
             for(let i=0; i<5; i++) {
                 const s = document.createElement('span'); s.className = i < lives ? 'heart' : 'heart lost';
                 s.innerHTML = '❤'; c.appendChild(s);
@@ -268,16 +293,7 @@
         }
         function startTimer() { interval = setInterval(() => { timer--; updateHUD(); if(timer <= 0) endGame(false); }, 1000); }
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'active-loc'); applyColor(i, '', false); }); }
-        
-        function initGameMode() {
-            timer = 90; lives = 5; matchesFound = 0; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD(); updateHearts();
-            const s = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            const all = [...lettersTop, ...lettersBottom];
-            all.forEach((l, i) => { const item = document.getElementById('item-'+l); item.classList.remove('invisible'); item.dataset.color = s[i]; applyColor(item, s[i], true); });
-            document.getElementById('start-btn').classList.add('hidden');
-        }
-        function startLocationRound() { resetBoard(); currentTarget = [...lettersTop, ...lettersBottom][Math.floor(Math.random()*28)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
+        function startLocationRound() { resetBoard(); currentTarget = allLetters[Math.floor(Math.random()*28)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
         function setLocType(t) { locType = t; buildGrid(); switchMode('LOCATION'); }
         function toggleTraining() { document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked); }
 
