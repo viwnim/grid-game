@@ -12,8 +12,9 @@
         .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; }
         .nav-btn.active { background: var(--accent); color: white; }
         
-        .toggle-wrap { margin-top: auto; padding-top: 20px; border-top: 1px solid #333; }
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; }
+        .toggle-wrap { margin-top: auto; padding-top: 10px; border-top: 1px solid #333; }
+        .toggle-item { display: flex; align-items: center; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
@@ -33,7 +34,6 @@
         .row { display: flex; gap: 8px; }
         
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; transition: opacity 0.3s; position: relative; box-sizing: border-box;}
-        /* Spacing: Gap after 4 letters (A-D / E-H) and at the 10th item */
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
 
         .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; }
@@ -41,11 +41,14 @@
         .bot-label { bottom: -22px; }
         body.training-on .train-label { opacity: 1; }
 
-        .circle { border-radius: 50%; background: black; border: 1px solid white !important; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; }
-        .item.active-loc .circle { background: blue !important; }
+        .circle { border-radius: 50%; background: black; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; border: 1px solid transparent; }
+        /* Only show border if the body has the circle-borders class */
+        body.circle-borders .circle { border: 1px solid white; }
+        
+        .item.active-loc .circle { background: blue !important; border-color: white !important; }
 
         #controls { display: flex; flex-direction: column; align-items: center; }
-        input#answer-input { padding: 10px; font-size: 1.5rem; width: 100px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
+        input#answer-input { padding: 10px; font-size: 1.5rem; width: 120px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
         
         #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 450px; }
@@ -54,9 +57,10 @@
         
         #feedback.correct { color: var(--green); }
         #feedback.wrong { color: var(--red); }
+        .toggle-text { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
     </style>
 </head>
-<body class="training-on">
+<body class="training-on circle-borders">
 
     <div id="sidebar">
         <h2 style="font-size: 0.8rem; color: #555; margin-bottom: 15px;">MODES</h2>
@@ -65,11 +69,20 @@
         <button id="nav-SEQUENCE" class="nav-btn" onclick="switchMode('SEQUENCE')">SEQUENCE</button>
         
         <div class="toggle-wrap">
-            <label class="switch">
-                <input type="checkbox" id="train-toggle" checked onchange="toggleTraining()">
-                <span class="slider"></span>
-            </label>
-            <span style="font-size: 0.8rem; font-weight: bold; color: #888;">TRAINING</span>
+            <div class="toggle-item">
+                <label class="switch">
+                    <input type="checkbox" id="train-toggle" checked onchange="toggleSetting('training-on', this)">
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-text">Training</span>
+            </div>
+            <div class="toggle-item">
+                <label class="switch">
+                    <input type="checkbox" id="border-toggle" checked onchange="toggleSetting('circle-borders', this)">
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-text">Borders</span>
+            </div>
         </div>
     </div>
 
@@ -81,9 +94,6 @@
                 <div>SCORE: <span id="score">1250</span></div>
             </div>
         </div>
-
-        <!-- Location Subnav is hidden since we only use one label type now -->
-        <div id="loc-subnav" class="hidden"></div>
 
         <div id="game-container">
             <div class="row" id="top-row"></div>
@@ -100,21 +110,19 @@
             <div id="res-title" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;"></div>
             <div id="res-detail" style="margin-bottom:10px; font-family: monospace; font-size: 0.85rem; line-height: 1.4;"></div>
             <button style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="initCurrentMode()">NEW GAME</button>
+            <button style="background:var(--red); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="resetCurrentGame()">RESTART</button>
             <button style="background:#444; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="showAllColors()">REVEAL</button>
         </div>
     </div>
 
     <script>
-        // Internal Unique IDs
         const lettersTop = ["A","B","C","D","T1","T2","T3","T4","T5","T6","T7","T8","T9","T10"];
         const lettersBottom = ["E","F","G","H","B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"];
         const allLetters = [...lettersTop, ...lettersBottom];
-        
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
         let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
 
-        // Helper to turn Internal ID (T1) into User Label (1)
         function getDisplayLabel(id) {
             return id.replace('T', '').replace('B', '');
         }
@@ -133,20 +141,20 @@
             const label = document.createElement('div');
             label.className = 'train-label ' + labelClass;
             label.innerText = getDisplayLabel(id);
-
             div.appendChild(label);
             for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
             div.onclick = () => handleItemClick(div);
             return div;
         }
 
-        function toggleTraining() { document.body.classList.toggle('training-on', document.getElementById('train-toggle').checked); }
+        function toggleSetting(className, el) { 
+            document.body.classList.toggle(className, el.checked); 
+        }
 
         function applyColor(item, type, isVisible) {
             const circles = item.querySelectorAll('.circle');
             circles.forEach(c => { c.style.background = 'black'; });
             if (!isVisible || !type) return;
-            
             if (type.startsWith('s-')) {
                 const c = type.split('-')[1];
                 circles.forEach(circle => { circle.style.background = c; });
@@ -167,14 +175,20 @@
             document.getElementById('result-panel').classList.add('hidden');
             document.getElementById('start-btn').classList.remove('hidden');
             document.getElementById('feedback').innerText = "";
-            
             const inp = document.getElementById('answer-input');
             inp.placeholder = (mode === 'SEQUENCE') ? "6 CHARS" : "?";
-            inp.style.width = (mode === 'SEQUENCE') ? "220px" : "100px";
-
+            inp.style.width = (mode === 'SEQUENCE') ? "220px" : "120px";
             resetBoard();
             updateHearts();
             if(mode === 'LOCATION') startLocationRound();
+        }
+
+        function resetCurrentGame() {
+            clearInterval(interval);
+            if (currentMode === 'GAME') initGameMode();
+            else if (currentMode === 'SEQUENCE') initSequenceMode();
+            else startLocationRound();
+            document.getElementById('result-panel').classList.add('hidden');
         }
 
         function initCurrentMode() {
@@ -186,8 +200,7 @@
         }
 
         function initSequenceMode() {
-            gameActive = false; timer = 90; clearInterval(interval); 
-            updateHearts();
+            gameActive = false; timer = 90; clearInterval(interval); updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
@@ -195,15 +208,12 @@
                 item.dataset.color = shuffled[i];
                 applyColor(item, shuffled[i], true);
             });
-
-            // Logic to build the sequence of partner locations
             const pairMap = {};
             allLetters.forEach(l => {
                 const color = document.getElementById('item-' + l).dataset.color;
                 if (!pairMap[color]) pairMap[color] = [];
                 pairMap[color].push(l);
             });
-
             const sequence = []; const usedColors = new Set();
             for (let i = 0; i < 14; i++) {
                 [lettersTop[i], lettersBottom[i]].forEach(l => {
@@ -236,50 +246,27 @@
         function handleItemClick(item) {
             if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
             if (item.classList.contains('matched') || currentMode === 'LOCATION') return;
-            
             if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
-                gameActive = true;
-                startTimer();
-                hideAllColors();
+                gameActive = true; startTimer(); hideAllColors();
                 applyColor(item, item.dataset.color, true);
             }
-            
             if (currentMode === 'SEQUENCE') return;
             if (item === firstCard) return;
-
             applyColor(item, item.dataset.color, true);
-            if (!firstCard) { 
-                firstCard = item; 
-            } else {
+            if (!firstCard) { firstCard = item; } 
+            else {
                 if (firstCard.dataset.color === item.dataset.color) {
                     const p1 = firstCard; const p2 = item;
                     awaitingReset = true; 
-                    setTimeout(() => { 
-                        p1.classList.add('matched'); 
-                        p2.classList.add('matched'); 
-                        matchesFound++; 
-                        awaitingReset = false;
-                        if(matchesFound === 14) endGame(true); 
-                    }, 400);
+                    setTimeout(() => { p1.classList.add('matched'); p2.classList.add('matched'); matchesFound++; awaitingReset = false; if(matchesFound === 14) endGame(true); }, 400);
                     firstCard = null;
                 } else {
-                    lives--; 
-                    score = Math.max(0, score - 50);
-                    updateHearts(); 
+                    lives--; score = Math.max(0, score - 50); updateHearts(); 
                     if(lives <= 0) endGame(false);
-                    else {
-                        showAllColors();
-                        awaitingReset = true;
-                    }
+                    else { showAllColors(); awaitingReset = true; }
                     firstCard = null;
                 }
             }
-        }
-
-        function checkSequence() {
-            const val = document.getElementById('answer-input').value.toUpperCase().trim();
-            if (val === correctSequence) endGame(true);
-            else endGame(false);
         }
 
         function endGame(win) {
@@ -287,18 +274,12 @@
             const panel = document.getElementById('result-panel'); panel.classList.remove('hidden');
             if (currentMode === 'SEQUENCE') {
                 document.getElementById('res-title').innerHTML = win ? "COMPLETE! ✅" : "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = win ? "You mastered the sequence." : `Incorrect. Sequence was: ${correctSequence}`;
+                document.getElementById('res-detail').innerHTML = win ? "Sequence mastered." : `Wrong. Goal: ${correctSequence}`;
                 panel.style.borderColor = win ? "var(--green)" : "var(--red)";
             } else {
-                if (win) {
-                    document.getElementById('res-title').innerHTML = "WINNER! 🏆";
-                    document.getElementById('res-detail').innerHTML = `Final Score: ${Math.floor(score)}`;
-                    panel.style.borderColor = "var(--green)";
-                } else {
-                    document.getElementById('res-title').innerHTML = "GAME OVER 💀";
-                    document.getElementById('res-detail').innerHTML = `Final Score: 0`;
-                    panel.style.borderColor = "var(--red)";
-                }
+                document.getElementById('res-title').innerHTML = win ? "WINNER! 🏆" : "GAME OVER 💀";
+                document.getElementById('res-detail').innerHTML = `Score: ${win ? Math.floor(score) : 0}`;
+                panel.style.borderColor = win ? "var(--green)" : "var(--red)";
             }
         }
 
@@ -316,12 +297,12 @@
         }
 
         function startTimer() { 
-            const decayPer100ms = 1000 / 90 / 10;
-            let msCounter = 0;
+            const decay = 1000 / 90 / 10;
+            let ms = 0;
             interval = setInterval(() => { 
-                msCounter += 100;
-                if (currentMode === 'GAME') score = Math.max(0, score - decayPer100ms);
-                if (msCounter % 1000 === 0) timer--;
+                ms += 100;
+                if (currentMode === 'GAME') score = Math.max(0, score - decay);
+                if (ms % 1000 === 0) timer--;
                 updateHUD(); 
                 if(timer <= 0) endGame(false); 
             }, 100); 
@@ -332,17 +313,21 @@
         function startLocationRound() { 
             resetBoard(); 
             currentTarget = allLetters[Math.floor(Math.random()*allLetters.length)]; 
-            document.getElementById('item-'+currentTarget).classList.add('active-loc'); 
-            document.getElementById('answer-input').focus(); 
+            const targetItem = document.getElementById('item-' + currentTarget);
+            if(targetItem) {
+                targetItem.classList.add('active-loc'); 
+                document.getElementById('answer-input').focus(); 
+            }
         }
 
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
                 const v = e.target.value.toUpperCase().trim();
                 if (currentMode === 'SEQUENCE') {
-                    checkSequence();
+                    if (v === correctSequence) endGame(true); else endGame(false);
                 } else {
-                    const isCorrect = (v === getDisplayLabel(currentTarget));
+                    const targetLabel = getDisplayLabel(currentTarget).toUpperCase();
+                    const isCorrect = (v === targetLabel);
                     const fb = document.getElementById('feedback'); 
                     fb.innerText = isCorrect ? "✔" : "✘"; 
                     fb.className = isCorrect ? "correct" : "wrong";
