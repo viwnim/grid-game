@@ -124,7 +124,12 @@
         let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
 
         function getDisplayLabel(id) {
-            return id.replace('T', '').replace('B', '');
+            // If the ID is just 'B' or 'T', return it as is.
+            // If it's longer (like 'B1' or 'T12'), strip the first letter.
+            if (id.length > 1) {
+                return id.substring(1);
+            }
+            return id;
         }
 
         function buildGrid() {
