@@ -9,60 +9,48 @@
         body { background-color: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         
         #sidebar { width: 180px; background: var(--sidebar); display: flex; flex-direction: column; padding: 20px; border-right: 1px solid #333; flex-shrink: 0; }
-        .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; }
+        .nav-btn { padding: 12px; margin-bottom: 10px; cursor: pointer; background: #2a2a2a; border: none; color: #888; border-radius: 6px; font-weight: bold; text-align: left; transition: 0.2s; }
         .nav-btn.active { background: var(--accent); color: white; }
         
         .toggle-wrap { margin-top: auto; padding-top: 10px; border-top: 1px solid #333; }
         .toggle-item { display: flex; align-items: center; margin-bottom: 15px; }
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; flex-shrink: 0; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; vertical-align: middle; margin-right: 8px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; overflow-y: auto; }
-        #hud-area { height: 100px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex-shrink: 0; }
-        #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; height: 2.5rem; }
-        .heart { color: var(--red); }
-        .heart.lost { color: #333; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding-top: 20px; overflow-y: auto; }
+        #hud-area { height: 80px; text-align: center; width: 100%; }
         
-        #stats-bar { display: flex; gap: 30px; font-family: monospace; font-size: 1.2rem; color: #aaa; }
-        #stats-bar span { color: white; font-weight: bold; }
-
-        #game-container { display: flex; flex-direction: column; gap: 25px; margin-top: 20px; margin-bottom: 30px; }
+        #game-container { display: flex; flex-direction: column; gap: 25px; margin-bottom: 25px; }
         .row { display: flex; gap: 8px; }
-        
-        .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; transition: opacity 0.3s; position: relative; box-sizing: border-box;}
+        .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; position: relative; cursor: pointer; }
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
-
-        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; }
+        
+        .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; opacity: 0; pointer-events: none; }
         .top-label { top: -22px; }
         .bot-label { bottom: -22px; }
         body.training-on .train-label { opacity: 1; }
 
-        .circle { border-radius: 50%; background: black; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; border: 1px solid transparent; }
+        .circle { border-radius: 50%; background: black; width: 100%; height: 100%; border: 1px solid transparent; box-sizing: border-box; pointer-events: none; }
         body.circle-borders .circle { border: 1px solid white; }
-        .item.active-loc .circle { background: blue !important; border-color: white !important; }
+        .active-loc .circle { background: blue !important; border-color: white !important; }
 
-        #controls { display: flex; flex-direction: column; align-items: center; }
-        input#answer-input { padding: 10px; font-size: 1.5rem; width: 120px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
-        #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+        #controls { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
+        input#answer-input { padding: 10px; font-size: 1.5rem; width: 150px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; text-transform: uppercase; }
         
-        #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 450px; }
+        #loc-stats-container { background: #1e1e1e; border: 1px solid #333; padding: 10px; border-radius: 8px; width: 320px; margin-top: 10px; }
+        .stats-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.8rem; }
+        .stats-table th { text-align: left; color: #555; border-bottom: 1px solid #333; }
+        .stats-table td { padding: 3px; border-bottom: 1px solid #252525; }
+        .weak-link { color: var(--red); font-weight: bold; }
+        
+        .heart { color: var(--red); font-size: 1.5rem; margin: 0 2px; }
+        .heart.lost { color: #333; }
         .hidden { display: none !important; }
         .matched { opacity: 0 !important; pointer-events: none !important; }
-        
-        #feedback.correct { color: var(--green); }
-        #feedback.wrong { color: var(--red); }
-        .toggle-text { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
-
-        /* Location Stats Table */
-        #loc-stats-container { margin-top: 20px; background: #1e1e1e; border: 1px solid #333; padding: 15px; border-radius: 8px; width: 300px; }
-        .stats-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.9rem; }
-        .stats-table th { text-align: left; color: #555; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .stats-table td { padding: 5px 0; border-bottom: 1px solid #252525; }
-        .slow-entry { color: var(--red); }
     </style>
 </head>
 <body class="training-on circle-borders">
@@ -75,18 +63,12 @@
         
         <div class="toggle-wrap">
             <div class="toggle-item">
-                <label class="switch">
-                    <input type="checkbox" id="train-toggle" checked onchange="toggleSetting('training-on', this)">
-                    <span class="slider"></span>
-                </label>
-                <span class="toggle-text">Training</span>
+                <label class="switch"><input type="checkbox" id="train-toggle" checked onchange="toggleSetting('training-on', this)"><span class="slider"></span></label>
+                <span style="font-size: 0.7rem;">Training</span>
             </div>
             <div class="toggle-item">
-                <label class="switch">
-                    <input type="checkbox" id="border-toggle" checked onchange="toggleSetting('circle-borders', this)">
-                    <span class="slider"></span>
-                </label>
-                <span class="toggle-text">Borders</span>
+                <label class="switch"><input type="checkbox" id="border-toggle" checked onchange="toggleSetting('circle-borders', this)"><span class="slider"></span></label>
+                <span style="font-size: 0.7rem;">Borders</span>
             </div>
         </div>
     </div>
@@ -94,10 +76,7 @@
     <div id="main-content">
         <div id="hud-area">
             <div id="hearts-container"></div>
-            <div id="stats-bar" class="hidden">
-                <div>TIME: <span id="timer">90</span>s</div>
-                <div>SCORE: <span id="score">1250</span></div>
-            </div>
+            <div id="stats-display" style="font-family: monospace; color: #aaa;"></div>
         </div>
 
         <div id="game-container">
@@ -106,36 +85,20 @@
         </div>
 
         <div id="controls">
-            <div id="feedback" style="font-size: 2rem; height: 2.5rem; font-weight: bold; margin-bottom: 5px;"></div>
-            <input type="text" id="answer-input" placeholder="?">
-            <button id="start-btn" onclick="initCurrentMode()">START</button>
-            
-            <!-- Local Stats Toggle for Location Mode -->
-            <div id="loc-toggle-area" style="margin-top: 10px;">
-                <label class="switch" style="width: 30px; height: 15px;">
-                    <input type="checkbox" id="show-loc-stats" onchange="toggleLocStats()">
-                    <span class="slider" style="border-radius: 15px;"></span>
-                </label>
-                <span style="font-size: 0.6rem; color: #666; font-weight: bold;">SHOW WEAKEST LINKS</span>
+            <div id="feedback" style="font-size: 1.2rem; height: 1.5rem; margin-bottom: 5px;"></div>
+            <input type="text" id="answer-input" placeholder="?" autocomplete="off">
+            <div style="margin-top:10px;">
+                <button id="start-btn" onclick="initMode()" style="background:var(--green); color:white; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">START</button>
+                <button id="reset-btn" class="hidden" onclick="initMode()" style="background:var(--red); color:white; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">RESTART</button>
             </div>
         </div>
 
-        <div id="loc-stats-container" class="hidden">
-            <div style="font-size: 0.7rem; font-weight: bold; color: var(--accent); margin-bottom: 10px;">SLOWEST 13 (MOVING AVG)</div>
+        <div id="loc-stats-container">
+            <div style="font-size: 0.7rem; font-weight: bold; color: var(--accent); margin-bottom: 8px;">SLOWEST 13 (5+ SAMPLES)</div>
             <table class="stats-table">
-                <thead>
-                    <tr><th>CHAR</th><th>AVG TIME</th><th>SAMPLES</th></tr>
-                </thead>
-                <tbody id="loc-stats-body"></tbody>
+                <thead><tr><th>CHAR</th><th>AVG TIME</th><th>HITS</th></tr></thead>
+                <tbody id="stats-body"></tbody>
             </table>
-        </div>
-
-        <div id="result-panel" class="hidden">
-            <div id="res-title" style="font-size: 1.3rem; font-weight: bold; margin-bottom: 5px;"></div>
-            <div id="res-detail" style="margin-bottom:10px; font-family: monospace; font-size: 0.85rem; line-height: 1.4;"></div>
-            <button style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="initCurrentMode()">NEW GAME</button>
-            <button style="background:var(--red); color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="resetCurrentGame()">RESTART</button>
-            <button style="background:#444; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;" onclick="showAllColors()">REVEAL</button>
         </div>
     </div>
 
@@ -145,255 +108,204 @@
         const allLetters = [...lettersTop, ...lettersBottom];
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
-        let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
-
-        // Statistics Logic
-        let sessionStats = {}; // { 'A': [time1, time2...], 'B': [...] }
-        let roundStartTime = 0;
+        let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, score = 1250, matchesFound = 0;
+        let gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+        let stats = {}, roundStartTime = 0;
 
         function buildGrid() {
-            const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
-            top.innerHTML = ''; bot.innerHTML = '';
-            lettersTop.forEach(id => top.appendChild(createItem(id, 'top-label')));
-            lettersBottom.forEach(id => bot.appendChild(createItem(id, 'bot-label')));
+            const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row'), statsBody = document.getElementById('stats-body');
+            top.innerHTML = lettersTop.map(l => createItemHTML(l, 'top-label')).join('');
+            bot.innerHTML = lettersBottom.map(l => createItemHTML(l, 'bot-label')).join('');
+            allLetters.forEach(l => {
+                const tr = document.createElement('tr'); tr.id = `stats-row-${l}`;
+                tr.innerHTML = `<td>${l}</td><td class="avg">-</td><td class="count">0</td>`;
+                statsBody.appendChild(tr);
+                stats[l] = { times: [], row: tr, avgCell: tr.querySelector('.avg'), countCell: tr.querySelector('.count') };
+            });
+            document.querySelectorAll('.item').forEach(el => el.onclick = () => handleItemClick(el));
         }
 
-        function createItem(id, labelClass) {
-            const div = document.createElement('div');
-            div.className = 'item'; div.id = 'item-' + id; 
-            const label = document.createElement('div');
-            label.className = 'train-label ' + labelClass;
-            label.innerText = id;
-            div.appendChild(label);
-            for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
-            div.onclick = () => handleItemClick(div);
-            return div;
-        }
-
-        function toggleSetting(className, el) { document.body.classList.toggle(className, el.checked); }
-        
-        function toggleLocStats() {
-            const container = document.getElementById('loc-stats-container');
-            container.classList.toggle('hidden', !document.getElementById('show-loc-stats').checked);
-        }
-
-        function applyColor(item, type, isVisible) {
-            const circles = item.querySelectorAll('.circle');
-            circles.forEach(c => { c.style.background = 'black'; });
-            if (!isVisible || !type) return;
-            if (type.startsWith('s-')) {
-                const c = type.split('-')[1];
-                circles.forEach(circle => { circle.style.background = c; });
-            } else {
-                const p = type.split('-');
-                circles.forEach((circle, i) => { 
-                    if(i === 4) { circle.style.background = p[3]; } else { circle.style.background = p[1]; } 
-                });
-            }
+        function createItemHTML(id, labelClass) {
+            return `<div class="item" id="item-${id}"><div class="train-label ${labelClass}">${id}</div>${Array(9).fill('<div class="circle"></div>').join('')}</div>`;
         }
 
         function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id === 'nav-' + mode));
-            document.getElementById('stats-bar').classList.toggle('hidden', mode === 'LOCATION' || mode === 'SEQUENCE');
-            document.getElementById('answer-input').classList.toggle('hidden', mode === 'GAME');
-            document.getElementById('loc-toggle-area').classList.toggle('hidden', mode !== 'LOCATION');
-            document.getElementById('result-panel').classList.add('hidden');
+            document.getElementById('loc-stats-container').classList.toggle('hidden', mode !== 'LOCATION');
+            document.getElementById('reset-btn').classList.add('hidden');
             document.getElementById('start-btn').classList.remove('hidden');
-            document.getElementById('feedback').innerText = "";
-            if (mode !== 'LOCATION') document.getElementById('loc-stats-container').classList.add('hidden');
-            else if (document.getElementById('show-loc-stats').checked) document.getElementById('loc-stats-container').classList.remove('hidden');
-
-            const inp = document.getElementById('answer-input');
-            inp.placeholder = (mode === 'SEQUENCE') ? "6 CHARS" : "?";
-            inp.style.width = (mode === 'SEQUENCE') ? "220px" : "120px";
-            resetBoard(); updateHearts();
-            if(mode === 'LOCATION') startLocationRound();
+            resetBoard();
+            if(mode === 'LOCATION') initMode();
         }
 
-        function resetCurrentGame() {
+        function initMode() {
+            resetBoard();
+            document.getElementById('start-btn').classList.add('hidden');
+            document.getElementById('reset-btn').classList.remove('hidden');
+            if (currentMode === 'LOCATION') startLocationRound();
+            else if (currentMode === 'GAME') initGameMode();
+            else if (currentMode === 'SEQUENCE') initSequenceMode();
+        }
+
+        function resetBoard() {
             clearInterval(interval);
-            if (currentMode === 'GAME') initGameMode();
-            else if (currentMode === 'SEQUENCE') initSequenceMode();
-            else startLocationRound();
-            document.getElementById('result-panel').classList.add('hidden');
-        }
-
-        function initCurrentMode() {
-            document.getElementById('result-panel').classList.add('hidden');
+            gameActive = false; awaitingReset = false; firstCard = null; lives = 5; score = 1250; matchesFound = 0;
             document.getElementById('feedback').innerText = "";
-            if (currentMode === 'GAME') initGameMode();
-            else if (currentMode === 'SEQUENCE') initSequenceMode();
-            else if (currentMode === 'LOCATION') startLocationRound();
+            document.getElementById('hearts-container').innerHTML = "";
+            document.getElementById('stats-display').innerText = "";
+            document.querySelectorAll('.item').forEach(i => {
+                i.classList.remove('active-loc', 'matched');
+                i.querySelectorAll('.circle').forEach(c => c.style.background = 'black');
+            });
         }
 
-        function initSequenceMode() {
-            gameActive = false; timer = 90; clearInterval(interval); updateHearts();
-            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
-            allLetters.forEach((l, i) => {
-                const item = document.getElementById('item-' + l);
-                item.classList.remove('invisible', 'matched');
-                item.dataset.color = shuffled[i]; applyColor(item, shuffled[i], true);
-            });
-            const pairMap = {};
-            allLetters.forEach(l => {
-                const color = document.getElementById('item-' + l).dataset.color;
-                if (!pairMap[color]) pairMap[color] = [];
-                pairMap[color].push(l);
-            });
-            const sequence = []; const usedColors = new Set();
-            for (let i = 0; i < 14; i++) {
-                [lettersTop[i], lettersBottom[i]].forEach(l => {
-                    const color = document.getElementById('item-' + l).dataset.color;
-                    if (!usedColors.has(color)) {
-                        const pair = pairMap[color];
-                        let partner = pair[0] === l ? pair[1] : pair[0];
-                        sequence.push(partner); usedColors.add(color);
-                    }
-                });
-            }
-            correctSequence = sequence.slice(0, 6).join("");
-            document.getElementById('start-btn').classList.add('hidden');
+        // --- LOCATION MODE ---
+        function startLocationRound() {
+            document.querySelectorAll('.item').forEach(i => i.classList.remove('active-loc'));
+            currentTarget = allLetters[Math.floor(Math.random() * allLetters.length)];
+            document.getElementById('item-' + currentTarget).classList.add('active-loc');
+            document.getElementById('answer-input').focus();
+            roundStartTime = performance.now();
         }
 
+        function updateStats(char) {
+            const duration = (performance.now() - roundStartTime) / 1000;
+            const data = stats[char];
+            data.times.push(duration);
+            if (data.times.length > 5) data.times.shift();
+            const avg = data.times.reduce((a, b) => a + b, 0) / data.times.length;
+            data.avgCell.textContent = avg.toFixed(2) + 's';
+            data.countCell.textContent = data.times.length;
+            sortStatsTable();
+        }
+
+        function sortStatsTable() {
+            const tbody = document.getElementById('stats-body'), rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const charA = a.id.split('-').pop(), charB = b.id.split('-').pop();
+                const avgA = stats[charA].times.length >= 5 ? (stats[charA].times.reduce((s, t) => s + t, 0) / stats[charA].times.length) : -1;
+                const avgB = stats[charB].times.length >= 5 ? (stats[charB].times.reduce((s, t) => s + t, 0) / stats[charB].times.length) : -1;
+                return avgB - avgA;
+            });
+            rows.forEach((row, i) => {
+                const char = row.id.split('-').pop();
+                row.classList.toggle('weak-link', i < 13 && stats[char].times.length >= 5);
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- GAME MODE (MEMORY) ---
         function initGameMode() {
-            timer = 90; lives = 5; matchesFound = 0; score = 1250; gameActive = false; awaitingReset = false;
-            clearInterval(interval); updateHUD(); updateHearts();
+            updateHearts();
             const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
             allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
-                item.classList.remove('invisible', 'matched');
-                item.dataset.color = shuffled[i]; applyColor(item, shuffled[i], true);
+                item.dataset.color = shuffled[i];
+                applyItemColor(item, shuffled[i]);
             });
-            document.getElementById('start-btn').classList.add('hidden');
+            setTimeout(hideAllColors, 2000);
         }
 
         function handleItemClick(item) {
-            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
-            if (item.classList.contains('matched') || currentMode === 'LOCATION') return;
-            if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
-                gameActive = true; startTimer(); hideAllColors(); applyColor(item, item.dataset.color, true);
-            }
-            if (currentMode === 'SEQUENCE') return;
-            if (item === firstCard) return;
-            applyColor(item, item.dataset.color, true);
+            if (currentMode === 'LOCATION' || awaitingReset || item.classList.contains('matched')) return;
+            if (!gameActive) { gameActive = true; startTimer(); hideAllColors(); }
+            
+            applyItemColor(item, item.dataset.color);
             if (!firstCard) { firstCard = item; } 
-            else {
+            else if (firstCard !== item) {
                 if (firstCard.dataset.color === item.dataset.color) {
-                    const p1 = firstCard; const p2 = item; awaitingReset = true; 
-                    setTimeout(() => { p1.classList.add('matched'); p2.classList.add('matched'); matchesFound++; awaitingReset = false; if(matchesFound === 14) endGame(true); }, 400);
-                    firstCard = null;
+                    item.classList.add('matched'); firstCard.classList.add('matched');
+                    matchesFound++; firstCard = null;
+                    if(matchesFound === 14) endGame(true);
                 } else {
-                    lives--; score = Math.max(0, score - 50); updateHearts(); 
-                    if(lives <= 0) endGame(false);
-                    else { showAllColors(); awaitingReset = true; }
-                    firstCard = null;
+                    awaitingReset = true;
+                    lives--; updateHearts();
+                    setTimeout(() => {
+                        if (lives <= 0) endGame(false);
+                        else { applyItemColor(item, ''); applyItemColor(firstCard, ''); awaitingReset = false; firstCard = null; }
+                    }, 800);
                 }
             }
+        }
+
+        // --- SEQUENCE MODE ---
+        function initSequenceMode() {
+            const shuffled = [...colorPairs, ...colorPairs].sort(() => Math.random() - 0.5);
+            allLetters.forEach((l, i) => {
+                const item = document.getElementById('item-' + l);
+                item.dataset.color = shuffled[i];
+                applyItemColor(item, shuffled[i]);
+            });
+            const pairMap = {};
+            allLetters.forEach(l => {
+                const c = document.getElementById('item-' + l).dataset.color;
+                if (!pairMap[c]) pairMap[c] = [];
+                pairMap[c].push(l);
+            });
+            const seq = []; const used = new Set();
+            for (let i = 0; i < 14; i++) {
+                [lettersTop[i], lettersBottom[i]].forEach(l => {
+                    const c = document.getElementById('item-' + l).dataset.color;
+                    if (!used.has(c)) {
+                        const p = pairMap[c];
+                        seq.push(p[0] === l ? p[1] : p[0]);
+                        used.add(c);
+                    }
+                });
+            }
+            correctSequence = seq.slice(0, 6).join("");
+            console.log("Goal:", correctSequence); // Debug
+        }
+
+        // --- UTILS ---
+        function applyItemColor(item, type) {
+            const circles = item.querySelectorAll('.circle');
+            circles.forEach(c => c.style.background = 'black');
+            if (!type) return;
+            if (type.startsWith('s-')) {
+                circles.forEach(c => c.style.background = type.split('-')[1]);
+            } else {
+                const p = type.split('-');
+                circles.forEach((c, i) => c.style.background = (i === 4) ? p[3] : p[1]);
+            }
+        }
+
+        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyItemColor(i, '')); }
+        
+        function updateHearts() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = Array(5).fill(0).map((_, i) => `<span class="heart ${i >= lives ? 'lost' : ''}">❤</span>`).join('');
+        }
+
+        function startTimer() {
+            interval = setInterval(() => {
+                timer--;
+                document.getElementById('stats-display').innerText = `TIME: ${timer}s | SCORE: ${score}`;
+                if (timer <= 0) endGame(false);
+            }, 1000);
         }
 
         function endGame(win) {
-            gameActive = false; clearInterval(interval);
-            const panel = document.getElementById('result-panel'); panel.classList.remove('hidden');
-            if (currentMode === 'SEQUENCE') {
-                document.getElementById('res-title').innerHTML = win ? "COMPLETE! ✅" : "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = win ? "Sequence mastered." : `Wrong. Goal: ${correctSequence}`;
-                panel.style.borderColor = win ? "var(--green)" : "var(--red)";
-            } else {
-                document.getElementById('res-title').innerHTML = win ? "WINNER! 🏆" : "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = `Score: ${win ? Math.floor(score) : 0}`;
-                panel.style.borderColor = win ? "var(--green)" : "var(--red)";
-            }
+            clearInterval(interval);
+            document.getElementById('feedback').innerText = win ? "WINNER! 🏆" : "GAME OVER 💀";
+            document.getElementById('feedback').style.color = win ? "var(--green)" : "var(--red)";
         }
 
-        function showAllColors() { document.querySelectorAll('.item').forEach(i => { if(!i.classList.contains('matched')) applyColor(i, i.dataset.color, true); }); }
-        function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
-        function updateHUD() { document.getElementById('timer').innerText = Math.ceil(timer); document.getElementById('score').innerText = Math.floor(score); }
-
-        function updateHearts() {
-            const c = document.getElementById('hearts-container'); c.innerHTML = '';
-            if (currentMode === 'LOCATION' || currentMode === 'SEQUENCE') return;
-            for(let i=0; i<5; i++) {
-                const s = document.createElement('span'); s.className = i < lives ? 'heart' : 'heart lost';
-                s.innerHTML = '❤'; c.appendChild(s);
-            }
-        }
-
-        function startTimer() { 
-            const decay = 1000 / 90 / 10; let ms = 0;
-            interval = setInterval(() => { 
-                ms += 100; if (currentMode === 'GAME') score = Math.max(0, score - decay);
-                if (ms % 1000 === 0) timer--;
-                updateHUD(); if(timer <= 0) endGame(false); 
-            }, 100); 
-        }
-
-        function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'matched', 'active-loc'); applyColor(i, '', false); }); }
-        
-        function startLocationRound() { 
-            resetBoard(); 
-            currentTarget = allLetters[Math.floor(Math.random()*allLetters.length)]; 
-            const targetItem = document.getElementById('item-' + currentTarget);
-            if(targetItem) {
-                targetItem.classList.add('active-loc'); 
-                document.getElementById('answer-input').focus(); 
-                roundStartTime = Date.now();
-            }
-        }
-
-        function recordLocStats(char) {
-            let timeTaken = (Date.now() - roundStartTime) / 1000;
-            if (!sessionStats[char]) sessionStats[char] = [];
-            sessionStats[char].push(timeTaken);
-            if (sessionStats[char].length > 5) sessionStats[char].shift(); // Keep last 5 (Moving Average)
-            updateLocStatsTable();
-        }
-
-        function updateLocStatsTable() {
-            const body = document.getElementById('loc-stats-body');
-            let data = [];
-
-            for (let char in sessionStats) {
-                if (sessionStats[char].length >= 5) {
-                    let avg = sessionStats[char].reduce((a, b) => a + b, 0) / sessionStats[char].length;
-                    data.push({ char, avg, count: sessionStats[char].length });
-                }
-            }
-
-            // Sort by slowest time first
-            data.sort((a, b) => b.avg - a.avg);
-            let top13 = data.slice(0, 13);
-
-            body.innerHTML = top13.map(d => `
-                <tr class="slow-entry">
-                    <td>${d.char}</td>
-                    <td>${d.avg.toFixed(2)}s</td>
-                    <td>${d.count}</td>
-                </tr>
-            `).join('');
-        }
-
-        document.getElementById('answer-input').onkeyup = (e) => {
-            if(e.key === 'Enter') {
-                const v = e.target.value.toUpperCase().trim();
-                if (currentMode === 'SEQUENCE') {
-                    if (v === correctSequence) endGame(true); else endGame(false);
-                } else if (currentMode === 'LOCATION') {
-                    const isCorrect = (v === currentTarget);
-                    const fb = document.getElementById('feedback'); 
-                    fb.innerText = isCorrect ? "✔" : "✘"; 
-                    fb.className = isCorrect ? "correct" : "wrong";
-                    if(isCorrect) {
-                        recordLocStats(currentTarget);
-                        setTimeout(startLocationRound, 600);
-                    }
-                }
+        document.getElementById('answer-input').oninput = (e) => {
+            const val = e.target.value.toUpperCase().trim();
+            if (currentMode === 'LOCATION' && val === currentTarget) {
+                updateStats(currentTarget);
+                e.target.value = ""; startLocationRound();
+            } else if (currentMode === 'SEQUENCE' && val.length === 6) {
+                if (val === correctSequence) endGame(true); else endGame(false);
                 e.target.value = "";
             }
         };
 
+        function toggleSetting(cls, el) { document.body.classList.toggle(cls, el.checked); }
+
         buildGrid();
-        switchMode('LOCATION');
     </script>
 </body>
 </html>
