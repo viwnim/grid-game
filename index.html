@@ -21,8 +21,8 @@
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(20px); }
 
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; }
-        #hud-area { height: 120px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; overflow-y: auto; }
+        #hud-area { height: 100px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex-shrink: 0; }
         #hearts-container { display: flex; gap: 8px; font-size: 1.8rem; margin-bottom: 5px; height: 2.5rem; }
         .heart { color: var(--red); }
         .heart.lost { color: #333; }
@@ -43,7 +43,6 @@
 
         .circle { border-radius: 50%; background: black; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; border: 1px solid transparent; }
         body.circle-borders .circle { border: 1px solid white; }
-        
         .item.active-loc .circle { background: blue !important; border-color: white !important; }
 
         #controls { display: flex; flex-direction: column; align-items: center; }
@@ -57,6 +56,13 @@
         #feedback.correct { color: var(--green); }
         #feedback.wrong { color: var(--red); }
         .toggle-text { font-size: 0.7rem; font-weight: bold; color: #888; text-transform: uppercase; }
+
+        /* Location Stats Table */
+        #loc-stats-container { margin-top: 20px; background: #1e1e1e; border: 1px solid #333; padding: 15px; border-radius: 8px; width: 300px; }
+        .stats-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.9rem; }
+        .stats-table th { text-align: left; color: #555; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .stats-table td { padding: 5px 0; border-bottom: 1px solid #252525; }
+        .slow-entry { color: var(--red); }
     </style>
 </head>
 <body class="training-on circle-borders">
@@ -103,6 +109,25 @@
             <div id="feedback" style="font-size: 2rem; height: 2.5rem; font-weight: bold; margin-bottom: 5px;"></div>
             <input type="text" id="answer-input" placeholder="?">
             <button id="start-btn" onclick="initCurrentMode()">START</button>
+            
+            <!-- Local Stats Toggle for Location Mode -->
+            <div id="loc-toggle-area" style="margin-top: 10px;">
+                <label class="switch" style="width: 30px; height: 15px;">
+                    <input type="checkbox" id="show-loc-stats" onchange="toggleLocStats()">
+                    <span class="slider" style="border-radius: 15px;"></span>
+                </label>
+                <span style="font-size: 0.6rem; color: #666; font-weight: bold;">SHOW WEAKEST LINKS</span>
+            </div>
+        </div>
+
+        <div id="loc-stats-container" class="hidden">
+            <div style="font-size: 0.7rem; font-weight: bold; color: var(--accent); margin-bottom: 10px;">SLOWEST 13 (MOVING AVG)</div>
+            <table class="stats-table">
+                <thead>
+                    <tr><th>CHAR</th><th>AVG TIME</th><th>SAMPLES</th></tr>
+                </thead>
+                <tbody id="loc-stats-body"></tbody>
+            </table>
         </div>
 
         <div id="result-panel" class="hidden">
@@ -118,10 +143,13 @@
         const lettersTop = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"];
         const lettersBottom = ["O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2"];
         const allLetters = [...lettersTop, ...lettersBottom];
-        
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
         let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+
+        // Statistics Logic
+        let sessionStats = {}; // { 'A': [time1, time2...], 'B': [...] }
+        let roundStartTime = 0;
 
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
@@ -132,8 +160,7 @@
 
         function createItem(id, labelClass) {
             const div = document.createElement('div');
-            div.className = 'item'; 
-            div.id = 'item-' + id; 
+            div.className = 'item'; div.id = 'item-' + id; 
             const label = document.createElement('div');
             label.className = 'train-label ' + labelClass;
             label.innerText = id;
@@ -143,8 +170,11 @@
             return div;
         }
 
-        function toggleSetting(className, el) { 
-            document.body.classList.toggle(className, el.checked); 
+        function toggleSetting(className, el) { document.body.classList.toggle(className, el.checked); }
+        
+        function toggleLocStats() {
+            const container = document.getElementById('loc-stats-container');
+            container.classList.toggle('hidden', !document.getElementById('show-loc-stats').checked);
         }
 
         function applyColor(item, type, isVisible) {
@@ -157,8 +187,7 @@
             } else {
                 const p = type.split('-');
                 circles.forEach((circle, i) => { 
-                    if(i === 4) { circle.style.background = p[3]; } 
-                    else { circle.style.background = p[1]; } 
+                    if(i === 4) { circle.style.background = p[3]; } else { circle.style.background = p[1]; } 
                 });
             }
         }
@@ -168,14 +197,17 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id === 'nav-' + mode));
             document.getElementById('stats-bar').classList.toggle('hidden', mode === 'LOCATION' || mode === 'SEQUENCE');
             document.getElementById('answer-input').classList.toggle('hidden', mode === 'GAME');
+            document.getElementById('loc-toggle-area').classList.toggle('hidden', mode !== 'LOCATION');
             document.getElementById('result-panel').classList.add('hidden');
             document.getElementById('start-btn').classList.remove('hidden');
             document.getElementById('feedback').innerText = "";
+            if (mode !== 'LOCATION') document.getElementById('loc-stats-container').classList.add('hidden');
+            else if (document.getElementById('show-loc-stats').checked) document.getElementById('loc-stats-container').classList.remove('hidden');
+
             const inp = document.getElementById('answer-input');
             inp.placeholder = (mode === 'SEQUENCE') ? "6 CHARS" : "?";
             inp.style.width = (mode === 'SEQUENCE') ? "220px" : "120px";
-            resetBoard();
-            updateHearts();
+            resetBoard(); updateHearts();
             if(mode === 'LOCATION') startLocationRound();
         }
 
@@ -201,8 +233,7 @@
             allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
                 item.classList.remove('invisible', 'matched');
-                item.dataset.color = shuffled[i];
-                applyColor(item, shuffled[i], true);
+                item.dataset.color = shuffled[i]; applyColor(item, shuffled[i], true);
             });
             const pairMap = {};
             allLetters.forEach(l => {
@@ -217,8 +248,7 @@
                     if (!usedColors.has(color)) {
                         const pair = pairMap[color];
                         let partner = pair[0] === l ? pair[1] : pair[0];
-                        sequence.push(partner);
-                        usedColors.add(color);
+                        sequence.push(partner); usedColors.add(color);
                     }
                 });
             }
@@ -233,8 +263,7 @@
             allLetters.forEach((l, i) => {
                 const item = document.getElementById('item-' + l);
                 item.classList.remove('invisible', 'matched');
-                item.dataset.color = shuffled[i];
-                applyColor(item, shuffled[i], true);
+                item.dataset.color = shuffled[i]; applyColor(item, shuffled[i], true);
             });
             document.getElementById('start-btn').classList.add('hidden');
         }
@@ -243,8 +272,7 @@
             if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
             if (item.classList.contains('matched') || currentMode === 'LOCATION') return;
             if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
-                gameActive = true; startTimer(); hideAllColors();
-                applyColor(item, item.dataset.color, true);
+                gameActive = true; startTimer(); hideAllColors(); applyColor(item, item.dataset.color, true);
             }
             if (currentMode === 'SEQUENCE') return;
             if (item === firstCard) return;
@@ -252,8 +280,7 @@
             if (!firstCard) { firstCard = item; } 
             else {
                 if (firstCard.dataset.color === item.dataset.color) {
-                    const p1 = firstCard; const p2 = item;
-                    awaitingReset = true; 
+                    const p1 = firstCard; const p2 = item; awaitingReset = true; 
                     setTimeout(() => { p1.classList.add('matched'); p2.classList.add('matched'); matchesFound++; awaitingReset = false; if(matchesFound === 14) endGame(true); }, 400);
                     firstCard = null;
                 } else {
@@ -293,14 +320,11 @@
         }
 
         function startTimer() { 
-            const decay = 1000 / 90 / 10;
-            let ms = 0;
+            const decay = 1000 / 90 / 10; let ms = 0;
             interval = setInterval(() => { 
-                ms += 100;
-                if (currentMode === 'GAME') score = Math.max(0, score - decay);
+                ms += 100; if (currentMode === 'GAME') score = Math.max(0, score - decay);
                 if (ms % 1000 === 0) timer--;
-                updateHUD(); 
-                if(timer <= 0) endGame(false); 
+                updateHUD(); if(timer <= 0) endGame(false); 
             }, 100); 
         }
 
@@ -313,7 +337,40 @@
             if(targetItem) {
                 targetItem.classList.add('active-loc'); 
                 document.getElementById('answer-input').focus(); 
+                roundStartTime = Date.now();
             }
+        }
+
+        function recordLocStats(char) {
+            let timeTaken = (Date.now() - roundStartTime) / 1000;
+            if (!sessionStats[char]) sessionStats[char] = [];
+            sessionStats[char].push(timeTaken);
+            if (sessionStats[char].length > 5) sessionStats[char].shift(); // Keep last 5 (Moving Average)
+            updateLocStatsTable();
+        }
+
+        function updateLocStatsTable() {
+            const body = document.getElementById('loc-stats-body');
+            let data = [];
+
+            for (let char in sessionStats) {
+                if (sessionStats[char].length >= 5) {
+                    let avg = sessionStats[char].reduce((a, b) => a + b, 0) / sessionStats[char].length;
+                    data.push({ char, avg, count: sessionStats[char].length });
+                }
+            }
+
+            // Sort by slowest time first
+            data.sort((a, b) => b.avg - a.avg);
+            let top13 = data.slice(0, 13);
+
+            body.innerHTML = top13.map(d => `
+                <tr class="slow-entry">
+                    <td>${d.char}</td>
+                    <td>${d.avg.toFixed(2)}s</td>
+                    <td>${d.count}</td>
+                </tr>
+            `).join('');
         }
 
         document.getElementById('answer-input').onkeyup = (e) => {
@@ -321,12 +378,15 @@
                 const v = e.target.value.toUpperCase().trim();
                 if (currentMode === 'SEQUENCE') {
                     if (v === correctSequence) endGame(true); else endGame(false);
-                } else {
+                } else if (currentMode === 'LOCATION') {
                     const isCorrect = (v === currentTarget);
                     const fb = document.getElementById('feedback'); 
                     fb.innerText = isCorrect ? "✔" : "✘"; 
                     fb.className = isCorrect ? "correct" : "wrong";
-                    if(isCorrect) setTimeout(startLocationRound, 600);
+                    if(isCorrect) {
+                        recordLocStats(currentTarget);
+                        setTimeout(startLocationRound, 600);
+                    }
                 }
                 e.target.value = "";
             }
