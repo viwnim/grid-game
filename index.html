@@ -33,6 +33,7 @@
         .row { display: flex; gap: 8px; }
         
         .item { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 45px; height: 45px; border: 1px solid white; padding: 3px; background: black; cursor: pointer; transition: opacity 0.3s; position: relative; box-sizing: border-box;}
+        /* Spacing: Gap after 4 letters (A-D / E-H) and at the 10th item */
         .item:nth-child(4), .item:nth-child(10) { margin-right: 45px; }
 
         .train-label { position: absolute; font-size: 0.7rem; color: var(--accent); width: 100%; text-align: center; font-weight: bold; pointer-events: none; opacity: 0; }
@@ -40,25 +41,19 @@
         .bot-label { bottom: -22px; }
         body.training-on .train-label { opacity: 1; }
 
-        /* FIXED: Added box-sizing and explicit border-color to ensure white border always shows */
-        .circle { 
-            border-radius: 50%; 
-            background: black; 
-            border: 1px solid white !important; 
-            width: 100%; 
-            height: 100%; 
-            pointer-events: none; 
-            box-sizing: border-box;
-        }
+        .circle { border-radius: 50%; background: black; border: 1px solid white !important; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; }
         .item.active-loc .circle { background: blue !important; }
 
         #controls { display: flex; flex-direction: column; align-items: center; }
-        input#answer-input { padding: 10px; font-size: 1.5rem; width: 220px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
+        input#answer-input { padding: 10px; font-size: 1.5rem; width: 100px; text-align: center; border-radius: 8px; border: 2px solid #444; background: #222; color: white; margin-bottom: 15px; text-transform: uppercase; }
         #start-btn { background: var(--green); color: white; font-size: 1.1rem; padding: 12px 60px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
         
         #result-panel { margin-top: 15px; padding: 15px; border-radius: 10px; background: #1e1e1e; border: 2px solid #444; text-align: center; width: 450px; }
         .hidden { display: none !important; }
         .matched { opacity: 0 !important; pointer-events: none !important; }
+        
+        #feedback.correct { color: var(--green); }
+        #feedback.wrong { color: var(--red); }
     </style>
 </head>
 <body class="training-on">
@@ -87,10 +82,8 @@
             </div>
         </div>
 
-        <div id="loc-subnav" style="margin-bottom: 20px;">
-            <button id="btn-let" onclick="setLocType('LET')" style="background:var(--accent); color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">LET</button>
-            <button id="btn-num" onclick="setLocType('NUM')" style="background:#444; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">NUM</button>
-        </div>
+        <!-- Location Subnav is hidden since we only use one label type now -->
+        <div id="loc-subnav" class="hidden"></div>
 
         <div id="game-container">
             <div class="row" id="top-row"></div>
@@ -112,26 +105,35 @@
     </div>
 
     <script>
-        const lettersTop = ["A","B","C","D","1","2","3","4","5","6","7","8","9","10"];
-        const lettersBottom = ["E","F","G","H","1","2","3","4","5","6","7","8","9","10"];
+        // Internal Unique IDs
+        const lettersTop = ["A","B","C","D","T1","T2","T3","T4","T5","T6","T7","T8","T9","T10"];
+        const lettersBottom = ["E","F","G","H","B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"];
         const allLetters = [...lettersTop, ...lettersBottom];
+        
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
-        let currentMode = 'LOCATION', locType = 'LET', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+        let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
+
+        // Helper to turn Internal ID (T1) into User Label (1)
+        function getDisplayLabel(id) {
+            return id.replace('T', '').replace('B', '');
+        }
 
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
             top.innerHTML = ''; bot.innerHTML = '';
-            lettersTop.forEach((l, i) => top.appendChild(createItem(l, i + 1, 'top-label')));
-            lettersBottom.forEach((l, i) => bot.appendChild(createItem(l, i + 1, 'bot-label')));
+            lettersTop.forEach(id => top.appendChild(createItem(id, 'top-label')));
+            lettersBottom.forEach(id => bot.appendChild(createItem(id, 'bot-label')));
         }
 
-        function createItem(l, num, labelClass) {
+        function createItem(id, labelClass) {
             const div = document.createElement('div');
-            div.className = 'item'; div.id = 'item-' + l;
+            div.className = 'item'; 
+            div.id = 'item-' + id; 
             const label = document.createElement('div');
             label.className = 'train-label ' + labelClass;
-            label.innerText = (locType === 'LET') ? l : num;
+            label.innerText = getDisplayLabel(id);
+
             div.appendChild(label);
             for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
             div.onclick = () => handleItemClick(div);
@@ -151,8 +153,8 @@
             } else {
                 const p = type.split('-');
                 circles.forEach((circle, i) => { 
-                    if(i === 4) { circle.style.background = p[3]; } // Center dot
-                    else { circle.style.background = p[1]; } // Outer border circles
+                    if(i === 4) { circle.style.background = p[3]; } 
+                    else { circle.style.background = p[1]; } 
                 });
             }
         }
@@ -160,7 +162,6 @@
         function switchMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.id === 'nav-' + mode));
-            document.getElementById('loc-subnav').classList.toggle('hidden', mode !== 'LOCATION');
             document.getElementById('stats-bar').classList.toggle('hidden', mode === 'LOCATION' || mode === 'SEQUENCE');
             document.getElementById('answer-input').classList.toggle('hidden', mode === 'GAME');
             document.getElementById('result-panel').classList.add('hidden');
@@ -168,8 +169,8 @@
             document.getElementById('feedback').innerText = "";
             
             const inp = document.getElementById('answer-input');
-            inp.placeholder = (mode === 'SEQUENCE') ? "6 LETTERS" : "?";
-            inp.style.width = (mode === 'SEQUENCE') ? "220px" : "80px";
+            inp.placeholder = (mode === 'SEQUENCE') ? "6 CHARS" : "?";
+            inp.style.width = (mode === 'SEQUENCE') ? "220px" : "100px";
 
             resetBoard();
             updateHearts();
@@ -195,6 +196,7 @@
                 applyColor(item, shuffled[i], true);
             });
 
+            // Logic to build the sequence of partner locations
             const pairMap = {};
             allLetters.forEach(l => {
                 const color = document.getElementById('item-' + l).dataset.color;
@@ -208,7 +210,8 @@
                     const color = document.getElementById('item-' + l).dataset.color;
                     if (!usedColors.has(color)) {
                         const pair = pairMap[color];
-                        sequence.push(pair[0] === l ? pair[1] : pair[0]);
+                        let partner = pair[0] === l ? pair[1] : pair[0];
+                        sequence.push(getDisplayLabel(partner));
                         usedColors.add(color);
                     }
                 });
@@ -231,12 +234,7 @@
         }
 
         function handleItemClick(item) {
-            if (awaitingReset) {
-                hideAllColors();
-                awaitingReset = false;
-                return;
-            }
-
+            if (awaitingReset) { hideAllColors(); awaitingReset = false; return; }
             if (item.classList.contains('matched') || currentMode === 'LOCATION') return;
             
             if (!gameActive && (currentMode === 'GAME' || currentMode === 'SEQUENCE')) {
@@ -268,10 +266,8 @@
                     lives--; 
                     score = Math.max(0, score - 50);
                     updateHearts(); 
-                    
-                    if(lives <= 0) {
-                        endGame(false);
-                    } else {
+                    if(lives <= 0) endGame(false);
+                    else {
                         showAllColors();
                         awaitingReset = true;
                     }
@@ -289,10 +285,9 @@
         function endGame(win) {
             gameActive = false; clearInterval(interval);
             const panel = document.getElementById('result-panel'); panel.classList.remove('hidden');
-            
             if (currentMode === 'SEQUENCE') {
                 document.getElementById('res-title').innerHTML = win ? "COMPLETE! ✅" : "GAME OVER 💀";
-                document.getElementById('res-detail').innerHTML = win ? "You mastered the sequence." : "Incorrect sequence pattern.";
+                document.getElementById('res-detail').innerHTML = win ? "You mastered the sequence." : `Incorrect. Sequence was: ${correctSequence}`;
                 panel.style.borderColor = win ? "var(--green)" : "var(--red)";
             } else {
                 if (win) {
@@ -309,11 +304,7 @@
 
         function showAllColors() { document.querySelectorAll('.item').forEach(i => { if(!i.classList.contains('matched')) applyColor(i, i.dataset.color, true); }); }
         function hideAllColors() { document.querySelectorAll('.item').forEach(i => applyColor(i, '', false)); }
-        
-        function updateHUD() { 
-            document.getElementById('timer').innerText = Math.ceil(timer); 
-            document.getElementById('score').innerText = Math.floor(score); 
-        }
+        function updateHUD() { document.getElementById('timer').innerText = Math.ceil(timer); document.getElementById('score').innerText = Math.floor(score); }
 
         function updateHearts() {
             const c = document.getElementById('hearts-container'); c.innerHTML = '';
@@ -327,40 +318,34 @@
         function startTimer() { 
             const decayPer100ms = 1000 / 90 / 10;
             let msCounter = 0;
-            
             interval = setInterval(() => { 
                 msCounter += 100;
-                if (currentMode === 'GAME') {
-                    score = Math.max(0, score - decayPer100ms);
-                }
-                
-                if (msCounter % 1000 === 0) {
-                    timer--;
-                }
+                if (currentMode === 'GAME') score = Math.max(0, score - decayPer100ms);
+                if (msCounter % 1000 === 0) timer--;
                 updateHUD(); 
                 if(timer <= 0) endGame(false); 
             }, 100); 
         }
 
         function resetBoard() { clearInterval(interval); document.querySelectorAll('.item').forEach(i => { i.classList.remove('invisible', 'matched', 'active-loc'); applyColor(i, '', false); }); }
-        function startLocationRound() { resetBoard(); currentTarget = allLetters[Math.floor(Math.random()*28)]; document.getElementById('item-'+currentTarget).classList.add('active-loc'); document.getElementById('answer-input').focus(); }
         
-        function setLocType(t) { 
-            locType = t; 
-            document.getElementById('btn-let').style.background = (t === 'LET') ? 'var(--accent)' : '#444';
-            document.getElementById('btn-num').style.background = (t === 'NUM') ? 'var(--accent)' : '#444';
-            buildGrid(); 
-            if(currentMode === 'LOCATION') startLocationRound(); 
+        function startLocationRound() { 
+            resetBoard(); 
+            currentTarget = allLetters[Math.floor(Math.random()*allLetters.length)]; 
+            document.getElementById('item-'+currentTarget).classList.add('active-loc'); 
+            document.getElementById('answer-input').focus(); 
         }
 
         document.getElementById('answer-input').onkeyup = (e) => {
             if(e.key === 'Enter') {
-                if (currentMode === 'SEQUENCE') checkSequence();
-                else {
-                    const v = e.target.value.toUpperCase().trim();
-                    const n = lettersTop.includes(currentTarget) ? lettersTop.indexOf(currentTarget)+1 : lettersBottom.indexOf(currentTarget)+1;
-                    const isCorrect = locType === 'LET' ? v === currentTarget : v === n.toString();
-                    const fb = document.getElementById('feedback'); fb.innerText = isCorrect ? "✔" : "✘"; fb.className = isCorrect ? (isCorrect ? "correct" : "wrong") : "";
+                const v = e.target.value.toUpperCase().trim();
+                if (currentMode === 'SEQUENCE') {
+                    checkSequence();
+                } else {
+                    const isCorrect = (v === getDisplayLabel(currentTarget));
+                    const fb = document.getElementById('feedback'); 
+                    fb.innerText = isCorrect ? "✔" : "✘"; 
+                    fb.className = isCorrect ? "correct" : "wrong";
                     if(isCorrect) setTimeout(startLocationRound, 600);
                 }
                 e.target.value = "";
