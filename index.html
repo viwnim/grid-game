@@ -42,7 +42,6 @@
         body.training-on .train-label { opacity: 1; }
 
         .circle { border-radius: 50%; background: black; width: 100%; height: 100%; pointer-events: none; box-sizing: border-box; border: 1px solid transparent; }
-        /* Only show border if the body has the circle-borders class */
         body.circle-borders .circle { border: 1px solid white; }
         
         .item.active-loc .circle { background: blue !important; border-color: white !important; }
@@ -116,21 +115,13 @@
     </div>
 
     <script>
-        const lettersTop = ["A","B","C","D","T1","T2","T3","T4","T5","T6","T7","T8","T9","T10"];
-        const lettersBottom = ["E","F","G","H","B1","B2","B3","B4","B5","B6","B7","B8","B9","B10"];
+        const lettersTop = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N"];
+        const lettersBottom = ["O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2"];
         const allLetters = [...lettersTop, ...lettersBottom];
+        
         const colorPairs = ['s-yellow', 's-red', 's-green', 's-purple', 's-blue', 'b-red-d-green', 'b-red-d-yellow', 'b-blue-d-green', 'b-purple-d-blue', 'b-green-d-yellow', 'b-green-d-red', 'b-yellow-d-blue', 'b-yellow-d-green', 'b-purple-d-yellow'];
 
         let currentMode = 'LOCATION', currentTarget = "", timer = 90, lives = 5, matchesFound = 0, score = 1250, gameActive = false, firstCard = null, awaitingReset = false, interval = null, correctSequence = "";
-
-        function getDisplayLabel(id) {
-            // If the ID is just 'B' or 'T', return it as is.
-            // If it's longer (like 'B1' or 'T12'), strip the first letter.
-            if (id.length > 1) {
-                return id.substring(1);
-            }
-            return id;
-        }
 
         function buildGrid() {
             const top = document.getElementById('top-row'), bot = document.getElementById('bottom-row');
@@ -145,7 +136,7 @@
             div.id = 'item-' + id; 
             const label = document.createElement('div');
             label.className = 'train-label ' + labelClass;
-            label.innerText = getDisplayLabel(id);
+            label.innerText = id;
             div.appendChild(label);
             for(let j=0; j<9; j++) div.appendChild(document.createElement('div')).className = 'circle';
             div.onclick = () => handleItemClick(div);
@@ -226,7 +217,7 @@
                     if (!usedColors.has(color)) {
                         const pair = pairMap[color];
                         let partner = pair[0] === l ? pair[1] : pair[0];
-                        sequence.push(getDisplayLabel(partner));
+                        sequence.push(partner);
                         usedColors.add(color);
                     }
                 });
@@ -331,8 +322,7 @@
                 if (currentMode === 'SEQUENCE') {
                     if (v === correctSequence) endGame(true); else endGame(false);
                 } else {
-                    const targetLabel = getDisplayLabel(currentTarget).toUpperCase();
-                    const isCorrect = (v === targetLabel);
+                    const isCorrect = (v === currentTarget);
                     const fb = document.getElementById('feedback'); 
                     fb.innerText = isCorrect ? "✔" : "✘"; 
                     fb.className = isCorrect ? "correct" : "wrong";
